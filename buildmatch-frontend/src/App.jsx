@@ -17,16 +17,27 @@ const C = {
   border:      "#E5E7EB",
   purple:      "#7C3AED",
 };
+{/*
+const CATEGORIES = [
+  { name: "Pedreiro",    img: "/buildmatch/categories/pedreiro.jpg"    },
+  { name: "Eletricista", img: "/buildmatch/categories/eletricista.jpg" },
+  { name: "Canalizador", img: "/buildmatch/categories/canalizador.jpg" },
+  { name: "Pintor",      img: "/buildmatch/categories/pintor.webp"     },
+  { name: "Carpinteiro", img: "/buildmatch/categories/carpinteiro.jpg" },
+  { name: "Engenheiro",  img: "/buildmatch/categories/engenheiro.jpg"  },
+];
+*/}
+
+const BASE = import.meta.env.BASE_URL;
 
 const CATEGORIES = [
-  { icon: "🧱", name: "Pedreiro"    },
-  { icon: "⚡", name: "Eletricista" },
-  { icon: "🔧", name: "Canalizador" },
-  { icon: "🎨", name: "Pintor"      },
-  { icon: "🪵", name: "Carpinteiro" },
-  { icon: "🏗️", name: "Engenheiro"  },
+  { name: "Pedreiro",    img: `${BASE}categories/pedreiro.jpg`    },
+  { name: "Eletricista", img: `${BASE}categories/eletricista.jpg` },
+  { name: "Canalizador", img: `${BASE}categories/canalizador.jpg` },
+  { name: "Pintor",      img: `${BASE}categories/pintor.webp`     },
+  { name: "Carpinteiro", img: `${BASE}categories/carpinteiro.jpg` },
+  { name: "Engenheiro",  img: `${BASE}categories/engenheiro.jpg`  },
 ];
-
 // ============================================================
 // COMPONENTES BASE
 // ============================================================
@@ -297,46 +308,60 @@ const ClientHome = ({ user, onProfSelect, onSearch }) => {
       <div style={{ padding: "20px 16px" }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 14 }}>Categorias</h3>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 24 }}>
-          {CATEGORIES.map((cat, i) => (
+         {CATEGORIES.map((cat, i) => (
             <div key={i} onClick={() => onSearch(cat.name)} style={{
               position: "relative",
-              background: i % 2 === 0 ? "#EEF4FF" : "#FFF8EE",
               borderRadius: 14,
-              padding: "14px 10px",
-              textAlign: "center",
-              cursor: "pointer",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-              border: `1px solid ${C.border}`,
               overflow: "hidden",
-              minHeight: 80,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "flex-start",
+              cursor: "pointer",
+              height: 90,
+              boxShadow: "0 2px 10px rgba(0,0,0,0.12)",
+              border: `1px solid ${C.border}`,
             }}>
-              {/* Barra de cor no topo */}
-              <div style={{
-                width: 28, height: 4, borderRadius: 2,
-                background: i % 2 === 0 ? C.primary : C.accent,
-              }} />
+              {/* Imagem de fundo */}
+              <img
+                src={cat.img}
+                alt={cat.name}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  objectPosition: "center",
+                }}
+                onError={e => {
+                  // Se a imagem não carregar, mostra fundo colorido
+                  e.target.style.display = "none";
+                  e.target.parentElement.style.background =
+                    i % 2 === 0 ? "#1F4E8C" : "#F57C00";
+                }}
+              />
 
-              {/* Nome da categoria */}
-              <div style={{
-                fontSize: 12, fontWeight: 700,
-                color: i % 2 === 0 ? C.primary : C.accentDark,
-                marginTop: 8, position: "relative", zIndex: 1,
-              }}>{cat.name}</div>
-
-              {/* Ícone grande no fundo */}
+              {/* Camada escura por cima da imagem */}
               <div style={{
                 position: "absolute",
-                bottom: -8, right: -4,
-                fontSize: 52,
-                opacity: 0.12,
-                lineHeight: 1,
-                pointerEvents: "none",
-                userSelect: "none",
-              }}>{cat.icon}</div>
+                inset: 0,
+                background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.2) 100%)",
+              }} />
+
+              {/* Texto por cima */}
+              <div style={{
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                padding: "8px 10px",
+                textAlign: "center",
+              }}>
+                <div style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "#fff",
+                  textShadow: "0 1px 3px rgba(0,0,0,0.5)",
+                  letterSpacing: 0.3,
+                }}>{cat.name}</div>
+              </div>
             </div>
           ))}
         </div>
@@ -375,7 +400,7 @@ const ClientSearch = ({ query: initQ, onProfSelect }) => {
         <div style={{ background: C.white, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
           <span>🔍</span>
           <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === "Enter" && search(q)}
-            placeholder="Pesquisar profissionais..." style={{ border: "none", outline: "none", flex: 1, fontSize: 14, fontFamily: "'DM Sans', sans-serif" }} />
+            placeholder="Pesquisar profissionais..." style={{ background: C.white, border: "none", outline: "none", flex: 1, fontSize: 14, fontFamily: "'DM Sans', sans-serif" }} />
           <button onClick={() => search(q)} style={{ background: C.accent, color: "#fff", border: "none", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>Buscar</button>
         </div>
       </div>
