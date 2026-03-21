@@ -305,10 +305,8 @@ const ClientHome = ({ user, onProfSelect, onSearch }) => {
           {q && <button onClick={() => onSearch(q)} style={{ background: C.accent, color: "#fff", border: "none", padding: "6px 14px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>Buscar</button>}
         </div>
       </div>
-      
-      
       <div style={{ padding: "20px 16px" }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 14 }}>Categorias</h3>
+       <h3 style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 14 }}>Categorias</h3>
         <div className="categories-grid">
           {CATEGORIES.map((cat, i) => (
             <div key={i} className="category-card" onClick={() => onSearch(cat.name)}>
@@ -330,27 +328,10 @@ const ClientHome = ({ user, onProfSelect, onSearch }) => {
           <h3 style={{ fontSize: 16, fontWeight: 700, color: C.dark, margin: 0 }}>Recomendados</h3>
           <span onClick={() => onSearch("")} style={{ color: C.primary, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Ver todos</span>
         </div>
-      </div>
-      {/*
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 14 }}>Categorias</h3>
-        <div className="categories-grid">
-          {CATEGORIES.map((cat, i) => (
-            <div key={i} className="category-card" onClick={() => onSearch(cat.name)}>
-              <img src={cat.img} alt={cat.name} onError={e => { e.target.style.display="none"; e.target.parentElement.style.background = i%2===0 ? "#1F4E8C":"#F57C00"; }} />
-              <div className="overlay" />
-              <div className="label">{cat.name}</div>
-            </div>
-          ))}
-        </div>
-        <div className="categories-grid"></div>
-        <div key={i} className="category-card" onClick={() => onSearch(cat.name)}></div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: C.dark, margin: 0 }}>Recomendados</h3>
-          <span onClick={() => onSearch("")} style={{ color: C.primary, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Ver todos</span>
-        </div>
+       
         {loading ? <Spinner /> : profs.map(prof => <ProfCard key={prof.id} prof={prof} onClick={() => onProfSelect(prof)} />)}
       </div>
-    </div>*/}
+    </div>
   );
 };
 
