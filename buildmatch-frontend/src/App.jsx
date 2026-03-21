@@ -768,60 +768,195 @@ const ProfProfile = ({ user, onLogout }) => {
 // ============================================================
 // CHAT (partilhado)
 // ============================================================
+// ============================================================
+// SUBSTITUA APENAS ESTE COMPONENTE NO SEU App.jsx
+// Encontre "const ChatScreen" e substitua tudo até ao próximo componente
+// ============================================================
+
 const ChatScreen = ({ conversation, user, onBack }) => {
   const [messages, setMessages] = useState([]);
   const [text, setText]         = useState("");
-  const [loading, setL]         = useState(true);
+  const [loading, setLoading]   = useState(true);
+  const [sending, setSending]   = useState(false);
   const endRef                  = useRef(null);
+  const inputRef                = useRef(null);
   const isPro                   = user?.type === "PROFESSIONAL";
 
   useEffect(() => {
-    messagesAPI.history(conversation.id).then(d => setMessages(d.data || [])).catch(() => setMessages([])).finally(() => setL(false));
+    messagesAPI.history(conversation.id)
+      .then(d => setMessages(d.data || []))
+      .catch(() => setMessages([]))
+      .finally(() => setLoading(false));
   }, [conversation.id]);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Foco automático na caixa de texto
+  useEffect(() => {
+    if (!loading) setTimeout(() => inputRef.current?.focus(), 100);
+  }, [loading]);
 
   const send = async () => {
-    if (!text.trim()) return;
-    const t = text; setText("");
-    try { const msg = await messagesAPI.send(conversation.id, { content: t }); setMessages(m => [...m, msg]); }
-    catch { setText(t); }
+    if (!text.trim() || sending) return;
+    const content = text.trim();
+    setText("");
+    setSending(true);
+
+    // Mostrar mensagem imediatamente
+    const temp = { id: `temp-${Date.now()}`, content, senderId: user?.id, createdAt: new Date().toISOString(), sending: true };
+    setMessages(prev => [...prev, temp]);
+
+    try {
+      const msg = await messagesAPI.send(conversation.id, { content });
+      setMessages(prev => prev.map(m => m.id === temp.id ? msg : m));
+    } catch {
+      setMessages(prev => prev.filter(m => m.id !== temp.id));
+      setText(content);
+    } finally {
+      setSending(false);
+      inputRef.current?.focus();
+    }
   };
 
-  const name = conversation.professional?.user?.name || "Profissional";
+  const handleKey = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+  };
+
+  const name     = conversation.professional?.user?.name || conversation.client?.name || "Utilizador";
+  const subtitle = conversation.title || conversation.professional?.specialty || "";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ background: isPro ? "#1a1a2e" : C.primary, padding: "16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", color: "#fff", fontSize: 20, cursor: "pointer" }}>←</button>
-        <Avatar name={name} size={40} />
-        <div>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", fontFamily: "'DM Sans', sans-serif", background: C.lightGray }}>
+
+      {/* Cabeçalho */}
+      <div style={{ background: isPro ? "#1a1a2e" : C.primary, padding: "16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
+        <button onClick={onBack} style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", width: 36, height: 36, borderRadius: "50%", cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
+        <Avatar name={name} size={42} />
+        <div style={{ flex: 1 }}>
           <div style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>{name}</div>
-          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>{conversation.title}</div>
+          {subtitle && <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 1 }}>{subtitle}</div>}
         </div>
+        <div style={{ width: 10, height: 10, background: C.success, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.3)" }} />
       </div>
-      <div style={{ flex: 1, overflowY: "auto", padding: 16, background: C.lightGray, display: "flex", flexDirection: "column", gap: 10 }}>
-        {loading ? <Spinner /> : messages.length === 0
-          ? <div style={{ textAlign: "center", color: C.gray, padding: 32 }}>Sem mensagens. Diga olá! 👋</div>
-          : messages.map(msg => {
-            const isMe = msg.senderId === user?.id;
-            return (
-              <div key={msg.id} style={{ display: "flex", justifyContent: isMe ? "flex-end" : "flex-start" }}>
-                <div style={{ maxWidth: "75%", padding: "10px 14px", borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: isMe ? (isPro ? "#1a1a2e" : C.primary) : C.white, color: isMe ? "#fff" : C.dark, fontSize: 14, lineHeight: 1.5, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-                  {msg.content}
-                  <div style={{ fontSize: 10, marginTop: 4, textAlign: "right", opacity: 0.6 }}>{new Date(msg.createdAt).toLocaleTimeString("pt", { hour: "2-digit", minute: "2-digit" })}</div>
-                </div>
+
+      {/* Mensagens */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 8px", display: "flex", flexDirection: "column", gap: 8 }}>
+        {loading ? <Spinner /> : (
+          <>
+            {/* Ecrã vazio — mostra mensagem amigável mas mantém caixa visível */}
+            {messages.length === 0 && (
+              <div style={{ textAlign: "center", padding: "40px 20px", color: C.gray }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>👋</div>
+                <p style={{ fontWeight: 600, fontSize: 15, margin: "0 0 6px", color: C.dark }}>Inicie a conversa!</p>
+                <p style={{ fontSize: 13, margin: 0 }}>Escreva a sua mensagem em baixo.</p>
               </div>
-            );
-          })
-        }
-        <div ref={endRef} />
+            )}
+
+            {messages.map((msg, i) => {
+              const isMe       = msg.senderId === user?.id;
+              const showAvatar = !isMe && (i === 0 || messages[i-1]?.senderId !== msg.senderId);
+              return (
+                <div key={msg.id} style={{ display: "flex", justifyContent: isMe ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 8 }}>
+                  {!isMe && (
+                    <div style={{ width: 28, flexShrink: 0 }}>
+                      {showAvatar && <Avatar name={name} size={28} />}
+                    </div>
+                  )}
+                  <div style={{ maxWidth: "72%" }}>
+                    <div style={{
+                      padding: "10px 14px",
+                      borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                      background: isMe ? (isPro ? "#1a1a2e" : C.primary) : C.white,
+                      color: isMe ? "#fff" : C.dark,
+                      fontSize: 14, lineHeight: 1.5,
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+                      opacity: msg.sending ? 0.7 : 1,
+                    }}>
+                      {msg.content}
+                    </div>
+                    <div style={{ fontSize: 10, color: C.gray, marginTop: 3, textAlign: isMe ? "right" : "left" }}>
+                      {msg.sending ? "A enviar..." : new Date(msg.createdAt).toLocaleTimeString("pt", { hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            <div ref={endRef} />
+          </>
+        )}
       </div>
-      <div style={{ background: C.white, padding: "12px 16px", display: "flex", gap: 10, alignItems: "center", borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
-        <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === "Enter" && send()}
-          placeholder="Escrever mensagem..."
-          style={{ flex: 1, border: `1.5px solid ${C.border}`, borderRadius: 24, padding: "10px 16px", outline: "none", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }} />
-        <button onClick={send} style={{ background: isPro ? C.accent : C.primary, border: "none", color: "#fff", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 18 }}>→</button>
+
+      {/* ── CAIXA DE TEXTO — SEMPRE VISÍVEL ── */}
+      <div style={{ background: C.white, padding: "12px 16px", borderTop: `1px solid ${C.border}`, flexShrink: 0, boxShadow: "0 -2px 10px rgba(0,0,0,0.06)" }}>
+
+        {/* Sugestões rápidas quando não há mensagens */}
+        {messages.length === 0 && !loading && (
+          <div style={{ display: "flex", gap: 8, marginBottom: 10, overflowX: "auto", scrollbarWidth: "none" }}>
+            {["Olá, estou interessado! 👋", "Qual o preço?", "Está disponível esta semana?"].map((s, i) => (
+              <button key={i} onClick={() => { setText(s); inputRef.current?.focus(); }} style={{ background: `${C.primary}10`, color: C.primary, border: `1px solid ${C.primary}30`, padding: "6px 12px", borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "'DM Sans', sans-serif" }}>
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
+          {/* Campo de texto que cresce automaticamente */}
+          <textarea
+            ref={inputRef}
+            value={text}
+            onChange={e => setText(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder="Escrever mensagem..."
+            rows={1}
+            style={{
+              flex: 1,
+              border: `1.5px solid ${text ? C.primary : C.border}`,
+              borderRadius: 24,
+              padding: "10px 16px",
+              outline: "none",
+              fontSize: 14,
+              fontFamily: "'DM Sans', sans-serif",
+              resize: "none",
+              boxSizing: "border-box",
+              lineHeight: 1.5,
+              maxHeight: 120,
+              overflowY: "auto",
+              transition: "border-color 0.2s",
+              background: C.white,
+            }}
+            onInput={e => {
+              e.target.style.height = "auto";
+              e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+            }}
+          />
+
+          {/* Botão enviar */}
+          <button
+            onClick={send}
+            disabled={!text.trim() || sending}
+            style={{
+              background: text.trim() ? (isPro ? C.accent : C.primary) : C.border,
+              border: "none", color: "#fff",
+              width: 46, height: 46,
+              borderRadius: "50%",
+              cursor: text.trim() ? "pointer" : "default",
+              fontSize: 20,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+              transition: "all 0.2s",
+              transform: text.trim() ? "scale(1)" : "scale(0.9)",
+            }}
+          >
+            {sending ? "⏳" : "➤"}
+          </button>
+        </div>
+
+        <p style={{ fontSize: 11, color: C.gray, margin: "6px 0 0", textAlign: "center" }}>
+          Enter para enviar • Shift+Enter para nova linha
+        </p>
       </div>
     </div>
   );
