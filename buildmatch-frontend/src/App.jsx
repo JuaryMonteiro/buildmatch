@@ -5,17 +5,17 @@ import { authAPI, professionalsAPI, projectsAPI, messagesAPI, schedulesAPI } fro
 // PALETA OFICIAL BuildMatch
 // ============================================================
 const C = {
-  primary:     "#1F4E8C",
+  primary: "#1F4E8C",
   primaryDark: "#163a6b",
-  accent:      "#F57C00",
-  dark:        "#2E2E2E",
-  gray:        "#6B7280",
-  lightGray:   "#F5F5F5",
-  white:       "#FFFFFF",
-  success:     "#22C55E",
-  error:       "#EF4444",
-  border:      "#E5E7EB",
-  purple:      "#7C3AED",
+  accent: "#F57C00",
+  dark: "#2E2E2E",
+  gray: "#6B7280",
+  lightGray: "#F5F5F5",
+  white: "#FFFFFF",
+  success: "#22C55E",
+  error: "#EF4444",
+  border: "#E5E7EB",
+  purple: "#7C3AED",
 };
 {/*
 const CATEGORIES = [
@@ -31,20 +31,20 @@ const CATEGORIES = [
 const BASE = import.meta.env.BASE_URL;
 
 const CATEGORIES = [
-  { name: "Pedreiro",    img: `${BASE}categories/pedreiro.jpg`    },
+  { name: "Pedreiro", img: `${BASE}categories/pedreiro.jpg` },
   { name: "Eletricista", img: `${BASE}categories/eletricista.jpg` },
   { name: "Canalizador", img: `${BASE}categories/canalizador.jpg` },
-  { name: "Pintor",      img: `${BASE}categories/pintor.webp`     },
+  { name: "Pintor", img: `${BASE}categories/pintor.webp` },
   { name: "Carpinteiro", img: `${BASE}categories/carpinteiro.jpg` },
-  { name: "Engenheiro",  img: `${BASE}categories/engenheiro.jpg`  },
+  { name: "Engenheiro", img: `${BASE}categories/engenheiro.webp` },
 ];
 // ============================================================
 // COMPONENTES BASE
 // ============================================================
 const Avatar = ({ name = "", color, size = 40 }) => {
   const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "U";
-  const colors   = [C.primary, C.accent, C.primaryDark, "#c96800", C.purple];
-  const bg       = color || colors[name.charCodeAt(0) % colors.length];
+  const colors = [C.primary, C.accent, C.primaryDark, "#c96800", C.purple];
+  const bg = color || colors[name.charCodeAt(0) % colors.length];
   return (
     <div style={{ width: size, height: size, borderRadius: "50%", background: bg, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: size * 0.35, flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}>
       {initials}
@@ -53,7 +53,7 @@ const Avatar = ({ name = "", color, size = 40 }) => {
 };
 
 const Stars = ({ rating = 0, size = 14 }) => (
-  <span>{[1,2,3,4,5].map(i => <span key={i} style={{ color: i <= Math.floor(rating) ? "#F59E0B" : "#D1D5DB", fontSize: size }}>★</span>)}</span>
+  <span>{[1, 2, 3, 4, 5].map(i => <span key={i} style={{ color: i <= Math.floor(rating) ? "#F59E0B" : "#D1D5DB", fontSize: size }}>★</span>)}</span>
 );
 
 const Card = ({ children, style, onClick }) => (
@@ -65,10 +65,10 @@ const Card = ({ children, style, onClick }) => (
 const Btn = ({ children, onClick, variant = "primary", small, full, disabled, style: ex }) => {
   const v = {
     primary: { background: disabled ? "#9CA3AF" : C.primary, color: "#fff", border: "none" },
-    accent:  { background: disabled ? "#9CA3AF" : C.accent,  color: "#fff", border: "none" },
-    outline: { background: "transparent", color: C.primary,  border: `2px solid ${C.primary}` },
-    ghost:   { background: "transparent", color: C.gray,     border: `1px solid ${C.border}` },
-    danger:  { background: C.error,  color: "#fff", border: "none" },
+    accent: { background: disabled ? "#9CA3AF" : C.accent, color: "#fff", border: "none" },
+    outline: { background: "transparent", color: C.primary, border: `2px solid ${C.primary}` },
+    ghost: { background: "transparent", color: C.gray, border: `1px solid ${C.border}` },
+    danger: { background: C.error, color: "#fff", border: "none" },
     success: { background: C.success, color: "#fff", border: "none" },
   };
   return (
@@ -116,10 +116,10 @@ const StatCard = ({ icon, label, value, color = C.primary }) => (
 
 const StatusBadge = ({ status }) => {
   const map = {
-    COMPLETED: { bg: "#D1FAE5", color: "#059669", label: "✓ Concluído"    },
-    ACTIVE:    { bg: "#DBEAFE", color: "#1D4ED8", label: "⟳ Em andamento" },
-    PENDING:   { bg: "#FEF3C7", color: "#D97706", label: "◷ Pendente"     },
-    CANCELLED: { bg: "#FEE2E2", color: "#DC2626", label: "✕ Cancelado"    },
+    COMPLETED: { bg: "#D1FAE5", color: "#059669", label: "✓ Concluído" },
+    ACTIVE: { bg: "#DBEAFE", color: "#1D4ED8", label: "⟳ Em andamento" },
+    PENDING: { bg: "#FEF3C7", color: "#D97706", label: "◷ Pendente" },
+    CANCELLED: { bg: "#FEE2E2", color: "#DC2626", label: "✕ Cancelado" },
   };
   const s = map[status] || { bg: "#F3F4F6", color: C.gray, label: status };
   return <span style={{ background: s.bg, color: s.color, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{s.label}</span>;
@@ -132,8 +132,8 @@ const Onboarding = ({ onFinish }) => {
   const [step, setStep] = useState(0);
   const slides = [
     { icon: "🔍", title: "Encontre Profissionais Confiáveis", desc: "Aceda a uma rede de profissionais qualificados e verificados da construção civil em Cabo Verde.", bg: C.primary },
-    { icon: "⭐", title: "Avaliações Reais e Verificadas",   desc: "Tome decisões informadas com avaliações autênticas de outros clientes.",                   bg: "#163a6b" },
-    { icon: "📅", title: "Agende com Facilidade",            desc: "Comunique, negoceie e agende serviços directamente pela plataforma.",                       bg: C.accent  },
+    { icon: "⭐", title: "Avaliações Reais e Verificadas", desc: "Tome decisões informadas com avaliações autênticas de outros clientes.", bg: "#163a6b" },
+    { icon: "📅", title: "Agende com Facilidade", desc: "Comunique, negoceie e agende serviços directamente pela plataforma.", bg: C.accent },
   ];
   const s = slides[step];
   return (
@@ -147,9 +147,9 @@ const Onboarding = ({ onFinish }) => {
         </div>
         {step < slides.length - 1
           ? <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-              <button onClick={onFinish} style={{ background: "rgba(255,255,255,0.2)", color: "#fff", border: "none", padding: "14px 28px", borderRadius: 12, cursor: "pointer", fontSize: 15, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>Saltar</button>
-              <button onClick={() => setStep(step + 1)} style={{ background: "#fff", color: s.bg, border: "none", padding: "14px 28px", borderRadius: 12, cursor: "pointer", fontSize: 15, fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>Próximo →</button>
-            </div>
+            <button onClick={onFinish} style={{ background: "rgba(255,255,255,0.2)", color: "#fff", border: "none", padding: "14px 28px", borderRadius: 12, cursor: "pointer", fontSize: 15, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>Saltar</button>
+            <button onClick={() => setStep(step + 1)} style={{ background: "#fff", color: s.bg, border: "none", padding: "14px 28px", borderRadius: 12, cursor: "pointer", fontSize: 15, fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>Próximo →</button>
+          </div>
           : <button onClick={onFinish} style={{ background: "#fff", color: s.bg, border: "none", padding: "16px 48px", borderRadius: 14, cursor: "pointer", fontSize: 16, fontWeight: 800, fontFamily: "'DM Sans', sans-serif" }}>Começar agora 🚀</button>
         }
       </div>
@@ -161,13 +161,13 @@ const Onboarding = ({ onFinish }) => {
 // LOGIN / REGISTO
 // ============================================================
 const Login = ({ onLogin }) => {
-  const [mode, setMode]       = useState("login");
-  const [type, setType]       = useState("CLIENT");
-  const [name, setName]       = useState("");
-  const [email, setEmail]     = useState("");
-  const [pass, setPass]       = useState("");
+  const [mode, setMode] = useState("login");
+  const [type, setType] = useState("CLIENT");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState("");
+  const [error, setError] = useState("");
 
   const submit = async () => {
     setError("");
@@ -179,7 +179,7 @@ const Login = ({ onLogin }) => {
         ? await authAPI.login({ email, password: pass })
         : await authAPI.register({ name, email, password: pass, type });
       localStorage.setItem("buildmatch_token", data.token);
-      localStorage.setItem("buildmatch_user",  JSON.stringify(data.user));
+      localStorage.setItem("buildmatch_user", JSON.stringify(data.user));
       onLogin(data.user);
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
@@ -196,7 +196,7 @@ const Login = ({ onLogin }) => {
         </div>
         <Card>
           <div style={{ display: "flex", background: C.lightGray, borderRadius: 10, padding: 4, marginBottom: 24 }}>
-            {["login","register"].map(m => (
+            {["login", "register"].map(m => (
               <button key={m} onClick={() => { setMode(m); setError(""); }} style={{ flex: 1, padding: "10px", border: "none", borderRadius: 8, background: mode === m ? C.white : "transparent", color: mode === m ? C.primary : C.gray, fontWeight: mode === m ? 700 : 500, cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>
                 {m === "login" ? "Entrar" : "Criar conta"}
               </button>
@@ -207,7 +207,7 @@ const Login = ({ onLogin }) => {
             <>
               <p style={{ fontSize: 13, color: C.gray, marginBottom: 10, fontWeight: 600 }}>Sou um:</p>
               <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-                {[["CLIENT","👤 Cliente"],["PROFESSIONAL","🔨 Profissional"]].map(([t, l]) => (
+                {[["CLIENT", "👤 Cliente"], ["PROFESSIONAL", "🔨 Profissional"]].map(([t, l]) => (
                   <button key={t} onClick={() => setType(t)} style={{ flex: 1, padding: "14px 8px", border: `2px solid ${type === t ? C.primary : C.border}`, borderRadius: 12, background: type === t ? `${C.primary}10` : C.white, color: type === t ? C.primary : C.gray, fontWeight: 700, cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif", transition: "all 0.2s" }}>
                     {l}
                   </button>
@@ -218,8 +218,8 @@ const Login = ({ onLogin }) => {
           )}
 
           <ErrMsg msg={error} />
-          <Input label="Email"          value={email} onChange={e => setEmail(e.target.value)} type="email"    placeholder="seu@email.com" />
-          <Input label="Palavra-passe"  value={pass}  onChange={e => setPass(e.target.value)}  type="password" placeholder="••••••••" />
+          <Input label="Email" value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="seu@email.com" />
+          <Input label="Palavra-passe" value={pass} onChange={e => setPass(e.target.value)} type="password" placeholder="••••••••" />
           <Btn onClick={submit} full disabled={loading}>
             {loading ? "A processar..." : mode === "login" ? "Entrar na conta" : "Criar conta"}
           </Btn>
@@ -234,7 +234,7 @@ const Login = ({ onLogin }) => {
 // ============================================================
 const ClientNav = ({ active, onChange }) => (
   <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.white, borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 100, padding: "8px 0 4px", boxShadow: "0 -4px 20px rgba(0,0,0,0.08)" }}>
-    {[["home","🏠","Início"],["search","🔍","Buscar"],["projects","📋","Projectos"],["messages","💬","Chat"],["profile","👤","Perfil"]].map(([id, icon, label]) => (
+    {[["home", "🏠", "Início"], ["search", "🔍", "Buscar"], ["projects", "📋", "Projectos"], ["messages", "💬", "Chat"], ["profile", "👤", "Perfil"]].map(([id, icon, label]) => (
       <button key={id} onClick={() => onChange(id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}>
         <span style={{ fontSize: 22 }}>{icon}</span>
         <span style={{ fontSize: 10, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", color: active === id ? C.primary : C.gray }}>{label}</span>
@@ -277,9 +277,9 @@ const ProfCard = ({ prof, onClick }) => {
 };
 
 const ClientHome = ({ user, onProfSelect, onSearch }) => {
-  const [profs, setProfs]     = useState([]);
+  const [profs, setProfs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [q, setQ]             = useState("");
+  const [q, setQ] = useState("");
 
   useEffect(() => {
     professionalsAPI.list({ limit: 4, sortBy: "rating" })
@@ -308,7 +308,7 @@ const ClientHome = ({ user, onProfSelect, onSearch }) => {
       <div style={{ padding: "20px 16px" }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 14 }}>Categorias</h3>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 24 }}>
-         {CATEGORIES.map((cat, i) => (
+          {CATEGORIES.map((cat, i) => (
             <div key={i} onClick={() => onSearch(cat.name)} style={{
               position: "relative",
               borderRadius: 14,
@@ -346,20 +346,23 @@ const ClientHome = ({ user, onProfSelect, onSearch }) => {
               }} />
 
               {/* Texto por cima */}
-              <div style={{
+             <div style={{
                 position: "absolute",
-                bottom: 0,
-                left: 0,
-                right: 0,
-                padding: "8px 10px",
+                bottom: 0, left: 0, right: 0,
+                padding: "8px 6px",
                 textAlign: "center",
               }}>
                 <div style={{
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: 700,
                   color: "#fff",
                   textShadow: "0 1px 3px rgba(0,0,0,0.5)",
                   letterSpacing: 0.3,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  paddingLeft: 4,
+                  paddingRight: 4,
                 }}>{cat.name}</div>
               </div>
             </div>
@@ -376,9 +379,9 @@ const ClientHome = ({ user, onProfSelect, onSearch }) => {
 };
 
 const ClientSearch = ({ query: initQ, onProfSelect }) => {
-  const [q, setQ]           = useState(initQ || "");
-  const [profs, setProfs]   = useState([]);
-  const [loading, setL]     = useState(false);
+  const [q, setQ] = useState(initQ || "");
+  const [profs, setProfs] = useState([]);
+  const [loading, setL] = useState(false);
   const [sortBy, setSortBy] = useState("rating");
   const [priceMax, setPriceMax] = useState("");
 
@@ -411,7 +414,7 @@ const ClientSearch = ({ query: initQ, onProfSelect }) => {
             <div style={{ flex: 1, minWidth: 140 }}>
               <label style={{ fontSize: 12, color: C.gray, display: "block", marginBottom: 4 }}>Ordenar por</label>
               <select value={sortBy} onChange={e => { setSortBy(e.target.value); search(q, e.target.value); }}
-                style={{ width: "100%", padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: "none" }}>
+                style={{ width: "100%", padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: "none" , background: "transparent", color: C.dark }}>
                 <option value="rating">⭐ Avaliação</option>
                 <option value="experience">🏆 Experiência</option>
                 <option value="reviewCount">💬 Mais avaliados</option>
@@ -420,7 +423,7 @@ const ClientSearch = ({ query: initQ, onProfSelect }) => {
             <div style={{ flex: 1, minWidth: 140 }}>
               <label style={{ fontSize: 12, color: C.gray, display: "block", marginBottom: 4 }}>Preço máx. (CVE/h)</label>
               <input value={priceMax} onChange={e => setPriceMax(e.target.value)} placeholder="Ex: 800"
-                style={{ width: "100%", padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }} />
+             style={{ width: "100%", padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box", background: "transparent", color: C.dark  }} />   
             </div>
           </div>
           <button onClick={() => search(q)} style={{ marginTop: 10, background: C.primary, color: "#fff", border: "none", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>Aplicar filtros</button>
@@ -437,8 +440,8 @@ const ClientSearch = ({ query: initQ, onProfSelect }) => {
 
 const ClientProjects = () => {
   const [projects, setProjects] = useState([]);
-  const [loading, setL]         = useState(true);
-  const [tab, setTab]           = useState("all");
+  const [loading, setL] = useState(true);
+  const [tab, setTab] = useState("all");
 
   useEffect(() => {
     projectsAPI.list().then(d => setProjects(d.data || [])).catch(() => setProjects([])).finally(() => setL(false));
@@ -452,12 +455,12 @@ const ClientProjects = () => {
     <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
       <h2 style={{ fontSize: 22, fontWeight: 800, color: C.dark, marginBottom: 16 }}>📋 Meus Projectos</h2>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
-        <StatCard icon="📁" label="Total"      value={projects.length}                                color={C.primary} />
-        <StatCard icon="⟳"  label="Activos"    value={projects.filter(p=>p.status==="ACTIVE").length}    color={C.accent}  />
-        <StatCard icon="✓"  label="Concluídos" value={projects.filter(p=>p.status==="COMPLETED").length} color={C.success} />
+        <StatCard icon="📁" label="Total" value={projects.length} color={C.primary} />
+        <StatCard icon="⟳" label="Activos" value={projects.filter(p => p.status === "ACTIVE").length} color={C.accent} />
+        <StatCard icon="✓" label="Concluídos" value={projects.filter(p => p.status === "COMPLETED").length} color={C.success} />
       </div>
       <div style={{ display: "flex", gap: 8, marginBottom: 16, overflowX: "auto", scrollbarWidth: "none" }}>
-        {[["all","Todos"],["active","Activos"],["done","Concluídos"],["pending","Pendentes"]].map(([v,l]) => (
+        {[["all", "Todos"], ["active", "Activos"], ["done", "Concluídos"], ["pending", "Pendentes"]].map(([v, l]) => (
           <button key={v} onClick={() => setTab(v)} style={{ padding: "8px 16px", border: "none", borderRadius: 20, cursor: "pointer", background: tab === v ? C.primary : C.white, color: tab === v ? "#fff" : C.gray, fontWeight: 600, fontSize: 13, whiteSpace: "nowrap", fontFamily: "'DM Sans', sans-serif", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>{l}</button>
         ))}
       </div>
@@ -474,7 +477,7 @@ const ClientProjects = () => {
             </div>
             <div style={{ display: "flex", gap: 16, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
               {proj.startDate && <div><div style={{ fontSize: 10, color: C.gray }}>DATA</div><div style={{ fontSize: 13, fontWeight: 600 }}>{new Date(proj.startDate).toLocaleDateString("pt")}</div></div>}
-              {proj.amount    && <div><div style={{ fontSize: 10, color: C.gray }}>VALOR</div><div style={{ fontSize: 13, fontWeight: 700, color: C.accent }}>{proj.amount.toLocaleString()} CVE</div></div>}
+              {proj.amount && <div><div style={{ fontSize: 10, color: C.gray }}>VALOR</div><div style={{ fontSize: 13, fontWeight: 700, color: C.accent }}>{proj.amount.toLocaleString()} CVE</div></div>}
             </div>
           </Card>
         ))
@@ -485,7 +488,7 @@ const ClientProjects = () => {
 
 const ClientMessages = ({ onOpenChat }) => {
   const [convs, setConvs] = useState([]);
-  const [loading, setL]   = useState(true);
+  const [loading, setL] = useState(true);
 
   useEffect(() => {
     messagesAPI.conversations().then(d => setConvs(d.data || [])).catch(() => setConvs([])).finally(() => setL(false));
@@ -531,7 +534,7 @@ const ClientProfile = ({ user, onLogout }) => (
         <div style={{ fontSize: 13, color: C.gray, marginBottom: 4 }}>Email</div>
         <div style={{ fontWeight: 600, color: C.dark }}>{user?.email}</div>
       </Card>
-      {[["✏️","Editar perfil"],["📍","Endereços guardados"],["⭐","Minhas avaliações"],["🔔","Notificações"],["🔒","Segurança"],["❓","Ajuda"]].map(([icon, label], i) => (
+      {[["✏️", "Editar perfil"], ["📍", "Endereços guardados"], ["⭐", "Minhas avaliações"], ["🔔", "Notificações"], ["🔒", "Segurança"], ["❓", "Ajuda"]].map(([icon, label], i) => (
         <div key={i} style={{ background: C.white, borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: 6, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
           <span style={{ fontSize: 20 }}>{icon}</span>
           <span style={{ flex: 1, fontWeight: 500, color: C.dark, fontSize: 14 }}>{label}</span>
@@ -548,7 +551,7 @@ const ClientProfile = ({ user, onLogout }) => (
 // ============================================================
 const ProfNav = ({ active, onChange }) => (
   <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#1a1a2e", borderTop: `2px solid ${C.accent}`, display: "flex", zIndex: 100, padding: "8px 0 4px" }}>
-    {[["dashboard","📊","Dashboard"],["projects","📋","Projectos"],["agenda","📅","Agenda"],["portfolio","🖼️","Portfólio"],["profile","👷","Perfil"]].map(([id, icon, label]) => (
+    {[["dashboard", "📊", "Dashboard"], ["projects", "📋", "Projectos"], ["agenda", "📅", "Agenda"], ["portfolio", "🖼️", "Portfólio"], ["profile", "👷", "Perfil"]].map(([id, icon, label]) => (
       <button key={id} onClick={() => onChange(id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}>
         <span style={{ fontSize: 22 }}>{icon}</span>
         <span style={{ fontSize: 10, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", color: active === id ? C.accent : "#9CA3AF" }}>{label}</span>
@@ -560,15 +563,15 @@ const ProfNav = ({ active, onChange }) => (
 
 const ProfDashboard = ({ user }) => {
   const [projects, setProjects] = useState([]);
-  const [loading, setL]         = useState(true);
+  const [loading, setL] = useState(true);
 
   useEffect(() => {
     projectsAPI.list().then(d => setProjects(d.data || [])).catch(() => setProjects([])).finally(() => setL(false));
   }, []);
 
   const completed = projects.filter(p => p.status === "COMPLETED").length;
-  const active    = projects.filter(p => p.status === "ACTIVE").length;
-  const pending   = projects.filter(p => p.status === "PENDING").length;
+  const active = projects.filter(p => p.status === "ACTIVE").length;
+  const pending = projects.filter(p => p.status === "PENDING").length;
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -583,7 +586,7 @@ const ProfDashboard = ({ user }) => {
           </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-          {[[active, "Activos", "⟳", C.accent],[completed, "Concluídos", "✓", C.success],[pending, "Pendentes", "◷", "#F59E0B"]].map(([v, l, icon, color], i) => (
+          {[[active, "Activos", "⟳", C.accent], [completed, "Concluídos", "✓", C.success], [pending, "Pendentes", "◷", "#F59E0B"]].map(([v, l, icon, color], i) => (
             <div key={i} style={{ background: "rgba(255,255,255,0.08)", borderRadius: 14, padding: "14px 10px", textAlign: "center" }}>
               <div style={{ fontSize: 20 }}>{icon}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color, marginTop: 4 }}>{v}</div>
@@ -620,8 +623,8 @@ const ProfDashboard = ({ user }) => {
 
 const ProfProjects = () => {
   const [projects, setProjects] = useState([]);
-  const [loading, setL]         = useState(true);
-  const [tab, setTab]           = useState("all");
+  const [loading, setL] = useState(true);
+  const [tab, setTab] = useState("all");
 
   useEffect(() => {
     projectsAPI.list().then(d => setProjects(d.data || [])).catch(() => setProjects([])).finally(() => setL(false));
@@ -631,14 +634,14 @@ const ProfProjects = () => {
     tab === "active" ? p.status === "ACTIVE" : tab === "done" ? p.status === "COMPLETED" : p.status === "PENDING"
   );
 
-  const accept   = async (id) => { try { await projectsAPI.update(id, { status: "ACTIVE"     }); setProjects(p => p.map(proj => proj.id === id ? { ...proj, status: "ACTIVE"     } : proj)); } catch {} };
-  const complete = async (id) => { try { await projectsAPI.update(id, { status: "COMPLETED" }); setProjects(p => p.map(proj => proj.id === id ? { ...proj, status: "COMPLETED" } : proj)); } catch {} };
+  const accept = async (id) => { try { await projectsAPI.update(id, { status: "ACTIVE" }); setProjects(p => p.map(proj => proj.id === id ? { ...proj, status: "ACTIVE" } : proj)); } catch { } };
+  const complete = async (id) => { try { await projectsAPI.update(id, { status: "COMPLETED" }); setProjects(p => p.map(proj => proj.id === id ? { ...proj, status: "COMPLETED" } : proj)); } catch { } };
 
   return (
     <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
       <h2 style={{ fontSize: 22, fontWeight: 800, color: C.dark, marginBottom: 16 }}>📋 Projectos Recebidos</h2>
       <div style={{ display: "flex", gap: 8, marginBottom: 16, overflowX: "auto", scrollbarWidth: "none" }}>
-        {[["all","Todos"],["active","Activos"],["done","Concluídos"],["pending","Pendentes"]].map(([v,l]) => (
+        {[["all", "Todos"], ["active", "Activos"], ["done", "Concluídos"], ["pending", "Pendentes"]].map(([v, l]) => (
           <button key={v} onClick={() => setTab(v)} style={{ padding: "8px 16px", border: "none", borderRadius: 20, cursor: "pointer", background: tab === v ? C.accent : C.white, color: tab === v ? "#fff" : C.gray, fontWeight: 600, fontSize: 13, whiteSpace: "nowrap", fontFamily: "'DM Sans', sans-serif", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>{l}</button>
         ))}
       </div>
@@ -655,13 +658,13 @@ const ProfProjects = () => {
             </div>
             {proj.description && <p style={{ color: C.gray, fontSize: 13, margin: "8px 0", lineHeight: 1.5 }}>{proj.description}</p>}
             <div style={{ display: "flex", gap: 12, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
-              {proj.amount  && <div><div style={{ fontSize: 10, color: C.gray }}>VALOR</div><div style={{ fontSize: 14, fontWeight: 700, color: C.accent }}>{proj.amount.toLocaleString()} CVE</div></div>}
+              {proj.amount && <div><div style={{ fontSize: 10, color: C.gray }}>VALOR</div><div style={{ fontSize: 14, fontWeight: 700, color: C.accent }}>{proj.amount.toLocaleString()} CVE</div></div>}
               {proj.address && <div><div style={{ fontSize: 10, color: C.gray }}>LOCAL</div><div style={{ fontSize: 13 }}>{proj.address}</div></div>}
             </div>
             {proj.status === "PENDING" && (
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <Btn onClick={() => accept(proj.id)}   variant="success" small full>✓ Aceitar</Btn>
-                <Btn onClick={() => complete(proj.id)} variant="ghost"   small full>✕ Recusar</Btn>
+                <Btn onClick={() => accept(proj.id)} variant="success" small full>✓ Aceitar</Btn>
+                <Btn onClick={() => complete(proj.id)} variant="ghost" small full>✕ Recusar</Btn>
               </div>
             )}
             {proj.status === "ACTIVE" && (
@@ -676,11 +679,11 @@ const ProfProjects = () => {
 
 const ProfAgenda = ({ user }) => {
   const [schedules, setSchedules] = useState([]);
-  const [loading, setL]           = useState(true);
-  const [date, setDate]           = useState("");
-  const [start, setStart]         = useState("09:00");
-  const [end, setEnd]             = useState("17:00");
-  const [saving, setSaving]       = useState(false);
+  const [loading, setL] = useState(true);
+  const [date, setDate] = useState("");
+  const [start, setStart] = useState("09:00");
+  const [end, setEnd] = useState("17:00");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!user?.professional?.id) { setL(false); return; }
@@ -704,7 +707,7 @@ const ProfAgenda = ({ user }) => {
         <Input label="Data" value={date} onChange={e => setDate(e.target.value)} type="date" />
         <div style={{ display: "flex", gap: 10 }}>
           <div style={{ flex: 1 }}><Input label="Início" value={start} onChange={e => setStart(e.target.value)} type="time" /></div>
-          <div style={{ flex: 1 }}><Input label="Fim"    value={end}   onChange={e => setEnd(e.target.value)}   type="time" /></div>
+          <div style={{ flex: 1 }}><Input label="Fim" value={end} onChange={e => setEnd(e.target.value)} type="time" /></div>
         </div>
         <Btn onClick={addSlot} variant="accent" full disabled={saving || !date}>{saving ? "A guardar..." : "➕ Adicionar horário"}</Btn>
       </Card>
@@ -728,12 +731,12 @@ const ProfAgenda = ({ user }) => {
 };
 
 const ProfPortfolio = ({ user }) => {
-  const [items, setItems]       = useState([]);
-  const [loading, setL]         = useState(true);
-  const [title, setTitle]       = useState("");
-  const [desc, setDesc]         = useState("");
-  const [cat, setCat]           = useState("");
-  const [saving, setSaving]     = useState(false);
+  const [items, setItems] = useState([]);
+  const [loading, setL] = useState(true);
+  const [title, setTitle] = useState("");
+  const [desc, setDesc] = useState("");
+  const [cat, setCat] = useState("");
+  const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
@@ -763,7 +766,7 @@ const ProfPortfolio = ({ user }) => {
       {showForm && (
         <Card style={{ marginBottom: 16, borderTop: `4px solid ${C.accent}` }}>
           <Input label="Título do projecto" value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Moradia T3 em Assomada" />
-          <Input label="Categoria"          value={cat}   onChange={e => setCat(e.target.value)}   placeholder="Ex: Residencial, Comercial..." />
+          <Input label="Categoria" value={cat} onChange={e => setCat(e.target.value)} placeholder="Ex: Residencial, Comercial..." />
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 13, fontWeight: 600, color: C.dark, display: "block", marginBottom: 6 }}>Descrição</label>
             <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Descreva o projecto realizado..."
@@ -796,7 +799,7 @@ const ProfProfile = ({ user, onLogout }) => {
         <h2 style={{ color: "#fff", fontSize: 20, fontWeight: 800, marginTop: 12, marginBottom: 4 }}>{user?.name}</h2>
         <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, margin: 0 }}>{prof?.specialty || "Profissional"}</p>
         <div style={{ display: "flex", justifyContent: "center", gap: 24, marginTop: 16 }}>
-          {[[prof?.rating?.toFixed(1)||"0.0","Avaliação"],[prof?.reviewCount||0,"Avaliações"],[prof?.experience||0,"Anos exp."]].map(([v,l],i) => (
+          {[[prof?.rating?.toFixed(1) || "0.0", "Avaliação"], [prof?.reviewCount || 0, "Avaliações"], [prof?.experience || 0, "Anos exp."]].map(([v, l], i) => (
             <div key={i} style={{ textAlign: "center" }}>
               <div style={{ color: "#fff", fontWeight: 800, fontSize: 18 }}>{v}</div>
               <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>{l}</div>
@@ -806,14 +809,14 @@ const ProfProfile = ({ user, onLogout }) => {
       </div>
       <div style={{ padding: "0 16px", marginTop: -24 }}>
         <Card style={{ marginBottom: 16 }}>
-          {[["Email", user?.email],["Localização", prof?.location ? `📍 ${prof.location}` : null],["Especialidade", prof?.specialty]].filter(([,v]) => v).map(([l,v],i) => (
+          {[["Email", user?.email], ["Localização", prof?.location ? `📍 ${prof.location}` : null], ["Especialidade", prof?.specialty]].filter(([, v]) => v).map(([l, v], i) => (
             <div key={i} style={{ marginBottom: i < 2 ? 12 : 0 }}>
               <div style={{ fontSize: 12, color: C.gray }}>{l}</div>
               <div style={{ fontWeight: 600, color: C.dark, marginTop: 2 }}>{v}</div>
             </div>
           ))}
         </Card>
-        {[["✏️","Editar perfil"],["🔔","Notificações"],["🔒","Segurança"],["❓","Ajuda"]].map(([icon, label], i) => (
+        {[["✏️", "Editar perfil"], ["🔔", "Notificações"], ["🔒", "Segurança"], ["❓", "Ajuda"]].map(([icon, label], i) => (
           <div key={i} style={{ background: C.white, borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: 6, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
             <span style={{ fontSize: 20 }}>{icon}</span>
             <span style={{ flex: 1, fontWeight: 500, color: C.dark, fontSize: 14 }}>{label}</span>
@@ -836,12 +839,12 @@ const ProfProfile = ({ user, onLogout }) => {
 
 const ChatScreen = ({ conversation, user, onBack }) => {
   const [messages, setMessages] = useState([]);
-  const [text, setText]         = useState("");
-  const [loading, setLoading]   = useState(true);
-  const [sending, setSending]   = useState(false);
-  const endRef                  = useRef(null);
-  const inputRef                = useRef(null);
-  const isPro                   = user?.type === "PROFESSIONAL";
+  const [text, setText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const endRef = useRef(null);
+  const inputRef = useRef(null);
+  const isPro = user?.type === "PROFESSIONAL";
 
   useEffect(() => {
     messagesAPI.history(conversation.id)
@@ -885,7 +888,7 @@ const ChatScreen = ({ conversation, user, onBack }) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   };
 
-  const name     = conversation.professional?.user?.name || conversation.client?.name || "Utilizador";
+  const name = conversation.professional?.user?.name || conversation.client?.name || "Utilizador";
   const subtitle = conversation.title || conversation.professional?.specialty || "";
 
   return (
@@ -916,8 +919,8 @@ const ChatScreen = ({ conversation, user, onBack }) => {
             )}
 
             {messages.map((msg, i) => {
-              const isMe       = msg.senderId === user?.id;
-              const showAvatar = !isMe && (i === 0 || messages[i-1]?.senderId !== msg.senderId);
+              const isMe = msg.senderId === user?.id;
+              const showAvatar = !isMe && (i === 0 || messages[i - 1]?.senderId !== msg.senderId);
               return (
                 <div key={msg.id} style={{ display: "flex", justifyContent: isMe ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 8 }}>
                   {!isMe && (
@@ -1028,11 +1031,11 @@ const ChatScreen = ({ conversation, user, onBack }) => {
 // ============================================================
 const ProfessionalProfile = ({ prof, onBack, onMessage, onSchedule }) => {
   const [data, setData] = useState(prof);
-  const [tab, setTab]   = useState("about");
+  const [tab, setTab] = useState("about");
   const [loading, setL] = useState(true);
 
   useEffect(() => {
-    professionalsAPI.get(prof.id).then(setData).catch(() => {}).finally(() => setL(false));
+    professionalsAPI.get(prof.id).then(setData).catch(() => { }).finally(() => setL(false));
   }, [prof.id]);
 
   const name = data.user?.name || "Profissional";
@@ -1054,17 +1057,17 @@ const ProfessionalProfile = ({ prof, onBack, onMessage, onSchedule }) => {
       <div style={{ padding: "0 16px", marginTop: -36 }}>
         <Card style={{ padding: 16, marginBottom: 16 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, textAlign: "center" }}>
-            {[["Experiência",`${data.experience} anos`],["Projectos",`${data.reviewCount}+`],["Localização",data.location||"—"]].map(([l,v],i) => (
+            {[["Experiência", `${data.experience} anos`], ["Projectos", `${data.reviewCount}+`], ["Localização", data.location || "—"]].map(([l, v], i) => (
               <div key={i}><div style={{ fontWeight: 800, color: C.primary, fontSize: 14 }}>{v}</div><div style={{ fontSize: 11, color: C.gray }}>{l}</div></div>
             ))}
           </div>
         </Card>
         <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-          <Btn onClick={onMessage}  variant="outline" full>💬 Mensagem</Btn>
-          <Btn onClick={onSchedule} variant="accent"  full>📅 Agendar</Btn>
+          <Btn onClick={onMessage} variant="outline" full>💬 Mensagem</Btn>
+          <Btn onClick={onSchedule} variant="accent" full>📅 Agendar</Btn>
         </div>
         <div style={{ display: "flex", gap: 4, borderBottom: `2px solid ${C.border}`, marginBottom: 20 }}>
-          {["about","portfolio","reviews"].map(t => (
+          {["about", "portfolio", "reviews"].map(t => (
             <button key={t} onClick={() => setTab(t)} style={{ padding: "10px 18px", border: "none", background: "transparent", cursor: "pointer", fontWeight: 600, fontSize: 14, fontFamily: "'DM Sans', sans-serif", color: tab === t ? C.primary : C.gray, borderBottom: `2px solid ${tab === t ? C.primary : "transparent"}`, marginBottom: -2 }}>
               {t === "about" ? "Sobre" : t === "portfolio" ? "Portfólio" : "Avaliações"}
             </button>
@@ -1074,33 +1077,33 @@ const ProfessionalProfile = ({ prof, onBack, onMessage, onSchedule }) => {
           <>
             {tab === "about" && (
               <div>
-                {data.about    && <Card style={{ marginBottom: 14 }}><h4 style={{ margin:"0 0 10px",color:C.dark }}>Sobre mim</h4><p style={{ color:C.gray,fontSize:14,lineHeight:1.7,margin:0 }}>{data.about}</p></Card>}
-                {data.tags     && <Card style={{ marginBottom: 14 }}><h4 style={{ margin:"0 0 12px",color:C.dark }}>Especialidades</h4><div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>{data.tags.split(",").map((t,i) => <span key={i} style={{ background:`${C.primary}15`,color:C.primary,padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600 }}>{t.trim()}</span>)}</div></Card>}
-                {data.priceMin && <Card><h4 style={{ margin:"0 0 8px",color:C.dark }}>Preço</h4><div style={{ fontSize:20,fontWeight:800,color:C.accent }}>{data.priceMin}–{data.priceMax} CVE/h</div></Card>}
+                {data.about && <Card style={{ marginBottom: 14 }}><h4 style={{ margin: "0 0 10px", color: C.dark }}>Sobre mim</h4><p style={{ color: C.gray, fontSize: 14, lineHeight: 1.7, margin: 0 }}>{data.about}</p></Card>}
+                {data.tags && <Card style={{ marginBottom: 14 }}><h4 style={{ margin: "0 0 12px", color: C.dark }}>Especialidades</h4><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{data.tags.split(",").map((t, i) => <span key={i} style={{ background: `${C.primary}15`, color: C.primary, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{t.trim()}</span>)}</div></Card>}
+                {data.priceMin && <Card><h4 style={{ margin: "0 0 8px", color: C.dark }}>Preço</h4><div style={{ fontSize: 20, fontWeight: 800, color: C.accent }}>{data.priceMin}–{data.priceMax} CVE/h</div></Card>}
               </div>
             )}
             {tab === "portfolio" && (
-              (data.portfolio||[]).length === 0 ? <p style={{ textAlign:"center",color:C.gray,padding:32 }}>Sem portfólio.</p>
-              : (data.portfolio||[]).map((item,i) => (
-                <Card key={i} style={{ marginBottom:12 }}>
-                  <div style={{ height:120,background:`linear-gradient(135deg,${C.primary}20,${C.accent}20)`,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:10,fontSize:32 }}>🏠</div>
-                  <div style={{ fontWeight:600,color:C.dark }}>{item.title}</div>
-                  {item.description && <div style={{ color:C.gray,fontSize:13,marginTop:4 }}>{item.description}</div>}
-                </Card>
-              ))
+              (data.portfolio || []).length === 0 ? <p style={{ textAlign: "center", color: C.gray, padding: 32 }}>Sem portfólio.</p>
+                : (data.portfolio || []).map((item, i) => (
+                  <Card key={i} style={{ marginBottom: 12 }}>
+                    <div style={{ height: 120, background: `linear-gradient(135deg,${C.primary}20,${C.accent}20)`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10, fontSize: 32 }}>🏠</div>
+                    <div style={{ fontWeight: 600, color: C.dark }}>{item.title}</div>
+                    {item.description && <div style={{ color: C.gray, fontSize: 13, marginTop: 4 }}>{item.description}</div>}
+                  </Card>
+                ))
             )}
             {tab === "reviews" && (
-              (data.reviews||[]).length === 0 ? <p style={{ textAlign:"center",color:C.gray,padding:32 }}>Sem avaliações ainda.</p>
-              : (data.reviews||[]).map((r,i) => (
-                <Card key={i} style={{ marginBottom:12 }}>
-                  <div style={{ display:"flex",justifyContent:"space-between",marginBottom:8 }}>
-                    <span style={{ fontWeight:700,color:C.dark }}>{r.author?.name}</span>
-                    <span style={{ fontSize:12,color:C.gray }}>{new Date(r.createdAt).toLocaleDateString("pt")}</span>
-                  </div>
-                  <Stars rating={r.rating} />
-                  <p style={{ color:C.gray,fontSize:13,lineHeight:1.6,margin:"8px 0 0" }}>{r.comment}</p>
-                </Card>
-              ))
+              (data.reviews || []).length === 0 ? <p style={{ textAlign: "center", color: C.gray, padding: 32 }}>Sem avaliações ainda.</p>
+                : (data.reviews || []).map((r, i) => (
+                  <Card key={i} style={{ marginBottom: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                      <span style={{ fontWeight: 700, color: C.dark }}>{r.author?.name}</span>
+                      <span style={{ fontSize: 12, color: C.gray }}>{new Date(r.createdAt).toLocaleDateString("pt")}</span>
+                    </div>
+                    <Stars rating={r.rating} />
+                    <p style={{ color: C.gray, fontSize: 13, lineHeight: 1.6, margin: "8px 0 0" }}>{r.comment}</p>
+                  </Card>
+                ))
             )}
           </>
         )}
@@ -1114,9 +1117,9 @@ const ProfessionalProfile = ({ prof, onBack, onMessage, onSchedule }) => {
 const ScheduleScreen = ({ professional, onBack, onConfirm }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
-  const [loading, setL]                 = useState(false);
-  const times = ["08:00","09:00","10:00","11:00","13:00","14:00","15:00","16:00"];
-  const days  = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() + i + 1); return d; });
+  const [loading, setL] = useState(false);
+  const times = ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"];
+  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() + i + 1); return d; });
 
   const confirm = async () => {
     if (!selectedDate || !selectedTime) return;
@@ -1164,20 +1167,20 @@ const ScheduleScreen = ({ professional, onBack, onConfirm }) => {
 // APP PRINCIPAL
 // ============================================================
 export default function BuildMatchApp() {
-  const [screen, setScreen]           = useState("onboarding");
-  const [user, setUser]               = useState(null);
-  const [clientTab, setClientTab]     = useState("home");
-  const [profTab, setProfTab]         = useState("dashboard");
+  const [screen, setScreen] = useState("onboarding");
+  const [user, setUser] = useState(null);
+  const [clientTab, setClientTab] = useState("home");
+  const [profTab, setProfTab] = useState("dashboard");
   const [selectedProf, setSelectedProf] = useState(null);
-  const [searchQ, setSearchQ]         = useState("");
-  const [openChat, setOpenChat]       = useState(null);
+  const [searchQ, setSearchQ] = useState("");
+  const [openChat, setOpenChat] = useState(null);
   const [scheduleFor, setScheduleFor] = useState(null);
-  const [successMsg, setSuccessMsg]   = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
 
   useEffect(() => {
     const link = document.createElement("link");
-    link.rel   = "stylesheet";
-    link.href  = "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap";
+    link.rel = "stylesheet";
+    link.href = "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap";
     document.head.appendChild(link);
 
     const token = localStorage.getItem("buildmatch_token");
@@ -1185,7 +1188,7 @@ export default function BuildMatchApp() {
     if (token && saved) { setUser(JSON.parse(saved)); setScreen("app"); }
   }, []);
 
-  const login  = (u) => { setUser(u); setScreen("app"); };
+  const login = (u) => { setUser(u); setScreen("app"); };
   const logout = () => { localStorage.clear(); setUser(null); setScreen("login"); };
   const success = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(null), 3000); };
 
@@ -1196,7 +1199,7 @@ export default function BuildMatchApp() {
 
   // Ecrãs iniciais
   if (screen === "onboarding") return <Onboarding onFinish={() => setScreen("login")} />;
-  if (screen === "login")      return <Login onLogin={login} />;
+  if (screen === "login") return <Login onLogin={login} />;
 
   // Agendamento
   if (scheduleFor) return (
@@ -1223,10 +1226,10 @@ export default function BuildMatchApp() {
     const renderPro = () => {
       switch (profTab) {
         case "dashboard": return <ProfDashboard user={user} />;
-        case "projects":  return <ProfProjects />;
-        case "agenda":    return <ProfAgenda user={user} />;
+        case "projects": return <ProfProjects />;
+        case "agenda": return <ProfAgenda user={user} />;
         case "portfolio": return <ProfPortfolio user={user} />;
-        case "profile":   return <ProfProfile user={user} onLogout={logout} />;
+        case "profile": return <ProfProfile user={user} onLogout={logout} />;
         default: return null;
       }
     };
@@ -1242,11 +1245,11 @@ export default function BuildMatchApp() {
   // ── PAINEL DO CLIENTE ───────────────────────────────────────
   const renderClient = () => {
     switch (clientTab) {
-      case "home":     return <ClientHome user={user} onProfSelect={setSelectedProf} onSearch={q => { setSearchQ(q); setClientTab("search"); }} />;
-      case "search":   return <ClientSearch query={searchQ} onProfSelect={setSelectedProf} />;
+      case "home": return <ClientHome user={user} onProfSelect={setSelectedProf} onSearch={q => { setSearchQ(q); setClientTab("search"); }} />;
+      case "search": return <ClientSearch query={searchQ} onProfSelect={setSelectedProf} />;
       case "projects": return <ClientProjects />;
       case "messages": return <ClientMessages onOpenChat={setOpenChat} />;
-      case "profile":  return <ClientProfile user={user} onLogout={logout} />;
+      case "profile": return <ClientProfile user={user} onLogout={logout} />;
       default: return null;
     }
   };

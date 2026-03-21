@@ -1,5 +1,5 @@
 
 git add .
-git commit -m "feat: imagem de fundo card categoria"
+git commit -m "feat: responsiva"
 git push
 npm run deploy --prefix buildmatch-frontend
