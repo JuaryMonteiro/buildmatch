@@ -46,7 +46,7 @@ const Avatar = ({ name = "", color, size = 40 }) => {
   const colors = [C.primary, C.accent, C.primaryDark, "#c96800", C.purple];
   const bg = color || colors[name.charCodeAt(0) % colors.length];
   return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: bg, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: size * 0.35, flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ width: size, height: size, borderRadius: "50%", background: bg, color: "#fff",  fontWeight: 700, fontSize: size * 0.35, flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}>
       {initials}
     </div>
   );
@@ -314,7 +314,7 @@ const ClientHome = ({ user, onProfSelect, onSearch }) => {
               borderRadius: 14,
               overflow: "hidden",
               cursor: "pointer",
-              height: 90,
+              height: 80,
               boxShadow: "0 2px 10px rgba(0,0,0,0.12)",
               border: `1px solid ${C.border}`,
             }}>
