@@ -46,7 +46,7 @@ const Avatar = ({ name = "", color, size = 40 }) => {
   const colors = [C.primary, C.accent, C.primaryDark, "#c96800", C.purple];
   const bg = color || colors[name.charCodeAt(0) % colors.length];
   return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: bg, color: "#fff",  fontWeight: 700, fontSize: size * 0.35, flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ width: size, height: size, borderRadius: "50%", background: bg, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: size * 0.35, flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}>
       {initials}
     </div>
   );
@@ -305,76 +305,52 @@ const ClientHome = ({ user, onProfSelect, onSearch }) => {
           {q && <button onClick={() => onSearch(q)} style={{ background: C.accent, color: "#fff", border: "none", padding: "6px 14px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>Buscar</button>}
         </div>
       </div>
+      
+      
       <div style={{ padding: "20px 16px" }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 14 }}>Categorias</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 24 }}>
+        <div className="categories-grid">
           {CATEGORIES.map((cat, i) => (
-            <div key={i} onClick={() => onSearch(cat.name)} style={{
-              position: "relative",
-              borderRadius: 14,
-              overflow: "hidden",
-              cursor: "pointer",
-              height: 80,
-              boxShadow: "0 2px 10px rgba(0,0,0,0.12)",
-              border: `1px solid ${C.border}`,
-            }}>
-              {/* Imagem de fundo */}
+            <div key={i} className="category-card" onClick={() => onSearch(cat.name)}>
               <img
                 src={cat.img}
                 alt={cat.name}
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  objectPosition: "center",
-                }}
                 onError={e => {
-                  // Se a imagem não carregar, mostra fundo colorido
                   e.target.style.display = "none";
-                  e.target.parentElement.style.background =
-                    i % 2 === 0 ? "#1F4E8C" : "#F57C00";
+                  e.target.parentElement.style.background = i % 2 === 0 ? "#1F4E8C" : "#F57C00";
                 }}
               />
-
-              {/* Camada escura por cima da imagem */}
-              <div style={{
-                position: "absolute",
-                inset: 0,
-                background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.2) 100%)",
-              }} />
-
-              {/* Texto por cima */}
-             <div style={{
-                position: "absolute",
-                bottom: 0, left: 0, right: 0,
-                padding: "8px 6px",
-                textAlign: "center",
-              }}>
-                <div style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "#fff",
-                  textShadow: "0 1px 3px rgba(0,0,0,0.5)",
-                  letterSpacing: 0.3,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  paddingLeft: 4,
-                  paddingRight: 4,
-                }}>{cat.name}</div>
-              </div>
+              <div className="overlay" />
+              <div className="label">{cat.name}</div>
             </div>
           ))}
         </div>
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: C.dark, margin: 0 }}>Recomendados</h3>
+          <span onClick={() => onSearch("")} style={{ color: C.primary, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Ver todos</span>
+        </div>
+      </div>
+      {/*
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 14 }}>Categorias</h3>
+        <div className="categories-grid">
+          {CATEGORIES.map((cat, i) => (
+            <div key={i} className="category-card" onClick={() => onSearch(cat.name)}>
+              <img src={cat.img} alt={cat.name} onError={e => { e.target.style.display="none"; e.target.parentElement.style.background = i%2===0 ? "#1F4E8C":"#F57C00"; }} />
+              <div className="overlay" />
+              <div className="label">{cat.name}</div>
+            </div>
+          ))}
+        </div>
+        <div className="categories-grid"></div>
+        <div key={i} className="category-card" onClick={() => onSearch(cat.name)}></div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, color: C.dark, margin: 0 }}>Recomendados</h3>
           <span onClick={() => onSearch("")} style={{ color: C.primary, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Ver todos</span>
         </div>
         {loading ? <Spinner /> : profs.map(prof => <ProfCard key={prof.id} prof={prof} onClick={() => onProfSelect(prof)} />)}
       </div>
-    </div>
+    </div>*/}
   );
 };
 
