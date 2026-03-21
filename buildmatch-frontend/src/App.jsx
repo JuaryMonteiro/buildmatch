@@ -298,9 +298,45 @@ const ClientHome = ({ user, onProfSelect, onSearch }) => {
         <h3 style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 14 }}>Categorias</h3>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 24 }}>
           {CATEGORIES.map((cat, i) => (
-            <div key={i} onClick={() => onSearch(cat.name)} style={{ background: C.white, borderRadius: 14, padding: "14px 10px", textAlign: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 26, marginBottom: 6 }}>{cat.icon}</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.dark }}>{cat.name}</div>
+            <div key={i} onClick={() => onSearch(cat.name)} style={{
+              position: "relative",
+              background: i % 2 === 0 ? "#EEF4FF" : "#FFF8EE",
+              borderRadius: 14,
+              padding: "14px 10px",
+              textAlign: "center",
+              cursor: "pointer",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+              border: `1px solid ${C.border}`,
+              overflow: "hidden",
+              minHeight: 80,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "flex-start",
+            }}>
+              {/* Barra de cor no topo */}
+              <div style={{
+                width: 28, height: 4, borderRadius: 2,
+                background: i % 2 === 0 ? C.primary : C.accent,
+              }} />
+
+              {/* Nome da categoria */}
+              <div style={{
+                fontSize: 12, fontWeight: 700,
+                color: i % 2 === 0 ? C.primary : C.accentDark,
+                marginTop: 8, position: "relative", zIndex: 1,
+              }}>{cat.name}</div>
+
+              {/* Ícone grande no fundo */}
+              <div style={{
+                position: "absolute",
+                bottom: -8, right: -4,
+                fontSize: 52,
+                opacity: 0.12,
+                lineHeight: 1,
+                pointerEvents: "none",
+                userSelect: "none",
+              }}>{cat.icon}</div>
             </div>
           ))}
         </div>
