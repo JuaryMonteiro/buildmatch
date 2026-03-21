@@ -290,7 +290,7 @@ const ClientHome = ({ user, onProfSelect, onSearch }) => {
         <div style={{ background: C.white, borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.15)" }}>
           <span style={{ fontSize: 18 }}>🔍</span>
           <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === "Enter" && onSearch(q)}
-            placeholder="Que serviço precisa?" style={{ border: "none", outline: "none", flex: 1, fontSize: 15, fontFamily: "'DM Sans', sans-serif" }} />
+            placeholder="Que serviço precisa?" style={{ background: C.white, border: "none", outline: "none", flex: 1, fontSize: 15, fontFamily: "'DM Sans', sans-serif" }} />
           {q && <button onClick={() => onSearch(q)} style={{ background: C.accent, color: "#fff", border: "none", padding: "6px 14px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>Buscar</button>}
         </div>
       </div>
