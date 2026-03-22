@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { authAPI, professionalsAPI, projectsAPI, messagesAPI, schedulesAPI } from "./services/api";
+import logo from "./assets/logo.png";
 
 // ============================================================
 // PALETA OFICIAL BuildMatch
@@ -188,11 +189,12 @@ const Login = ({ onLogin }) => {
   return (
     <div style={{ minHeight: "100vh", background: C.lightGray, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ width: "100%", maxWidth: 420 }}>
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ background: C.primary, width: 64, height: 64, borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: 28 }}>🏗️</div>
-          <span style={{ fontSize: 26, fontWeight: 800 }}>
-            <span style={{ color: C.primary }}>Build</span><span style={{ color: C.accent }}>Match</span>
-          </span>
+       <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <img 
+            src={logo} 
+            alt="BuildMatch Logo" 
+            style={{ width: 180 }}
+          />
         </div>
         <Card>
           <div style={{ display: "flex", background: C.lightGray, borderRadius: 10, padding: 4, marginBottom: 24 }}>
