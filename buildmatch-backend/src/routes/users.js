@@ -1,4 +1,3 @@
-// src/routes/users.js
 const express = require('express');
 const { PrismaClient } = require('../../generated/prisma');
 const authMiddleware   = require('../middleware/auth');
@@ -6,32 +5,43 @@ const authMiddleware   = require('../middleware/auth');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// GET /api/users/:id
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.params.id },
-      include: { professional: true },
-    });
+    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
     if (!user) return res.status(404).json({ error: 'Utilizador não encontrado' });
-    const { password, ...userWithoutPassword } = user;
-    res.json(userWithoutPassword);
+    const { password, ...rest } = user;
+    res.json(rest);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao obter utilizador' });
   }
 });
 
-// PUT /api/users/:id — Actualizar perfil
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const { name, phone, avatar } = req.body;
-    const user = await prisma.user.update({
+
+    // Verificar se o utilizador existe
+    const existing = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: 'Utilizador não encontrado' });
+
+    // Verificar se é o próprio utilizador
+    if (req.user.id !== req.params.id) {
+      return res.status(403).json({ error: 'Sem permissão para editar este perfil' });
+    }
+
+    const updated = await prisma.user.update({
       where: { id: req.params.id },
-      data: { name, phone, avatar },
+      data: {
+        ...(name  ? { name }   : {}),
+        ...(phone ? { phone }  : {}),
+        ...(avatar ? { avatar } : {}),
+      },
     });
-    const { password, ...userWithoutPassword } = user;
-    res.json(userWithoutPassword);
+
+    const { password, ...rest } = updated;
+    res.json(rest);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Erro ao actualizar utilizador' });
   }
 });
