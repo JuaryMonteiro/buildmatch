@@ -33,6 +33,8 @@ app.use('/api/messages',      require('./src/routes/messages'));
 app.use('/api/schedules',     require('./src/routes/schedules'));
 app.use('/api/reviews',       require('./src/routes/reviews'));
 app.use('/api/portfolio',     require('./src/routes/portfolio'));
+app.use('/api/addresses',     require('./src/routes/addresses'));
+
 
 // ── Socket.IO — Chat em tempo real ────────────────
 io.on('connection', (socket) => {

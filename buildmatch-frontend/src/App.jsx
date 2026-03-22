@@ -477,32 +477,504 @@ const ClientMessages = ({ onOpenChat }) => {
   );
 };
 
-const ClientProfile = ({ user, onLogout }) => (
-  <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
-    <div style={{ background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, padding: "28px 16px 50px", textAlign: "center" }}>
-      <Avatar name={user?.name} color={C.accent} size={80} />
-      <h2 style={{ color: "#fff", fontSize: 20, fontWeight: 800, marginTop: 12, marginBottom: 4 }}>{user?.name}</h2>
-      <div style={{ background: "rgba(255,255,255,0.2)", display: "inline-block", padding: "4px 16px", borderRadius: 20, marginTop: 4 }}>
-        <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>👤 Cliente</span>
+// ============================================================
+// SUBSTITUA O COMPONENTE ClientProfile no seu App.jsx
+// ============================================================
+
+const ClientProfile = ({ user, onLogout }) => {
+  const [section, setSection] = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
+
+  const showSuccess = (msg) => {
+    setSuccessMsg(msg);
+    setTimeout(() => setSuccessMsg(null), 3000);
+  };
+
+  // ── Editar Perfil ──────────────────────────────
+  const EditProfile = () => {
+    const [name,   setName]   = useState(user?.name  || "");
+    const [email,  setEmail]  = useState(user?.email || "");
+    const [phone,  setPhone]  = useState(user?.phone || "");
+    const [saving, setSaving] = useState(false);
+
+    const save = async () => {
+      setSaving(true);
+      try {
+        const { usersAPI } = await import("./services/api");
+        const updated = await usersAPI.update(user.id, { name, phone });
+        localStorage.setItem("buildmatch_user", JSON.stringify({ ...user, ...updated }));
+        showSuccess("Perfil actualizado com sucesso!");
+        setSection(null);
+      } catch (err) {
+        alert(err.message);
+      } finally { setSaving(false); }
+    };
+
+    return (
+      <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <button onClick={() => setSection(null)} style={{ background: C.lightGray, border: "none", borderRadius: 10, padding: "8px 14px", cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>← Voltar</button>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: C.dark, margin: 0 }}>Editar Perfil</h2>
+        </div>
+
+        {/* Avatar */}
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{ position: "relative", display: "inline-block" }}>
+            <Avatar name={name} color={C.accent} size={88} />
+            <button style={{ position: "absolute", bottom: 0, right: 0, background: C.primary, border: "none", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", color: "#fff", fontSize: 14 }}>✏️</button>
+          </div>
+          <p style={{ color: C.gray, fontSize: 12, marginTop: 8 }}>Toque para alterar a foto</p>
+        </div>
+
+        <Card>
+          <Input label="Nome completo"  value={name}  onChange={e => setName(e.target.value)}  placeholder="Seu nome completo" />
+          <Input label="Email"          value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="seu@email.com" />
+          <Input label="Telefone"       value={phone} onChange={e => setPhone(e.target.value)} type="tel"   placeholder="+238 991 0000" />
+        </Card>
+
+        <div style={{ marginTop: 20 }}>
+          <Btn onClick={save} full disabled={saving}>{saving ? "A guardar..." : "💾 Guardar alterações"}</Btn>
+        </div>
+      </div>
+    );
+  };
+
+
+  // ── Endereços — API REAL ───────────────────────────────────
+  const Addresses = () => {
+    const [addresses, setAddresses] = useState([]);
+    const [loading,   setL]         = useState(true);
+    const [showForm,  setShowForm]  = useState(false);
+    const [label,     setLabel]     = useState("");
+    const [address,   setAddress]   = useState("");
+    const [saving,    setSaving]    = useState(false);
+
+    useEffect(() => {
+      loadAddresses();
+    }, []);
+
+    const loadAddresses = async () => {
+      setL(true);
+      try {
+        const { addressesAPI } = await import("./services/api");
+        const data = await addressesAPI.list();
+        setAddresses(data.data || []);
+      } catch {
+        setAddresses([]);
+      } finally { setL(false); }
+    };
+
+    const add = async () => {
+      if (!label || !address) return;
+      setSaving(true);
+      try {
+        const { addressesAPI } = await import("./services/api");
+        const newAddr = await addressesAPI.create({ label, address, default: addresses.length === 0 });
+        setAddresses(prev => [...prev, newAddr]);
+        setLabel(""); setAddress(""); setShowForm(false);
+      } catch (err) { alert(err.message); }
+      finally { setSaving(false); }
+    };
+
+    const remove = async (id) => {
+      try {
+        const { addressesAPI } = await import("./services/api");
+        await addressesAPI.delete(id);
+        setAddresses(prev => prev.filter(a => a.id !== id));
+      } catch (err) { alert(err.message); }
+    };
+
+    const setDefault = async (id) => {
+      try {
+        const { addressesAPI } = await import("./services/api");
+        await addressesAPI.update(id, { default: true });
+        setAddresses(prev => prev.map(a => ({ ...a, default: a.id === id })));
+      } catch (err) { alert(err.message); }
+    };
+
+    return (
+      <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <button onClick={() => setSection(null)} style={{ background: C.lightGray, border: "none", borderRadius: 10, padding: "8px 14px", cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>← Voltar</button>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: C.dark, margin: 0 }}>Endereços</h2>
+          <button onClick={() => setShowForm(!showForm)} style={{ marginLeft: "auto", background: C.accent, color: "#fff", border: "none", padding: "8px 14px", borderRadius: 10, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>
+            {showForm ? "✕ Cancelar" : "➕ Novo"}
+          </button>
+        </div>
+
+        {showForm && (
+          <Card style={{ marginBottom: 16, borderTop: `4px solid ${C.accent}` }}>
+            <Input label="Nome do endereço" value={label}   onChange={e => setLabel(e.target.value)}   placeholder="Ex: Casa, Trabalho..." />
+            <Input label="Endereço"         value={address} onChange={e => setAddress(e.target.value)} placeholder="Rua, número, cidade" />
+            <Btn onClick={add} variant="accent" full disabled={saving || !label || !address}>
+              {saving ? "A guardar..." : "💾 Guardar endereço"}
+            </Btn>
+          </Card>
+        )}
+
+        {loading ? <Spinner /> : addresses.length === 0
+          ? (
+            <div style={{ textAlign: "center", padding: 48, color: C.gray }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>📍</div>
+              <p style={{ fontWeight: 600 }}>Nenhum endereço guardado</p>
+              <p style={{ fontSize: 13 }}>Adicione um endereço para facilitar os agendamentos</p>
+            </div>
+          )
+          : addresses.map(addr => (
+            <Card key={addr.id} style={{ marginBottom: 12, padding: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: 18 }}>📍</span>
+                    <span style={{ fontWeight: 700, color: C.dark, fontSize: 14 }}>{addr.label}</span>
+                    {addr.default && (
+                      <span style={{ background: `${C.primary}15`, color: C.primary, padding: "2px 8px", borderRadius: 12, fontSize: 11, fontWeight: 600 }}>Principal</span>
+                    )}
+                  </div>
+                  <p style={{ color: C.gray, fontSize: 13, margin: 0, lineHeight: 1.5 }}>{addr.address}</p>
+                </div>
+                <button onClick={() => remove(addr.id)} style={{ background: "#FEE2E2", border: "none", color: C.error, width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: 14, flexShrink: 0, marginLeft: 10 }}>✕</button>
+              </div>
+              {!addr.default && (
+                <button onClick={() => setDefault(addr.id)} style={{ marginTop: 10, background: "none", border: `1px solid ${C.border}`, color: C.gray, padding: "7px 12px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontFamily: "'DM Sans', sans-serif", width: "100%", fontWeight: 500 }}>
+                  ✓ Definir como principal
+                </button>
+              )}
+            </Card>
+          ))
+        }
+      </div>
+    );
+  };
+
+  // ── Avaliações feitas — API REAL ───────────────────────────
+  const MyReviews = () => {
+    const [reviews, setReviews] = useState([]);
+    const [loading, setL]       = useState(true);
+
+    useEffect(() => {
+      loadReviews();
+    }, []);
+
+    const loadReviews = async () => {
+      setL(true);
+      try {
+        // Carregar projectos concluídos com avaliações
+        const data = await projectsAPI.list({ status: "COMPLETED" });
+        const projects = data.data || [];
+
+        // Filtrar os que têm avaliação
+        const withReviews = projects.filter(p => p.review);
+        setReviews(withReviews);
+      } catch {
+        setReviews([]);
+      } finally { setL(false); }
+    };
+
+    return (
+      <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <button onClick={() => setSection(null)} style={{ background: C.lightGray, border: "none", borderRadius: 10, padding: "8px 14px", cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>← Voltar</button>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: C.dark, margin: 0 }}>Minhas Avaliações</h2>
+        </div>
+
+        {loading ? <Spinner /> : reviews.length === 0
+          ? (
+            <div style={{ textAlign: "center", padding: 48, color: C.gray }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>⭐</div>
+              <p style={{ fontWeight: 600 }}>Ainda não fez nenhuma avaliação</p>
+              <p style={{ fontSize: 13 }}>Após concluir um serviço poderá avaliar o profissional</p>
+            </div>
+          )
+          : reviews.map(proj => (
+            <Card key={proj.id} style={{ marginBottom: 12 }}>
+              {/* Info do profissional */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: C.dark, fontSize: 14 }}>{proj.professional?.user?.name}</div>
+                  <div style={{ color: C.gray, fontSize: 12, marginTop: 2 }}>{proj.professional?.specialty}</div>
+                  <div style={{ color: C.gray, fontSize: 12, marginTop: 2 }}>📋 {proj.title}</div>
+                </div>
+                <span style={{ fontSize: 12, color: C.gray }}>{new Date(proj.review.createdAt).toLocaleDateString("pt")}</span>
+              </div>
+
+              {/* Estrelas */}
+              <div style={{ display: "flex", gap: 3, marginBottom: 8 }}>
+                {[1,2,3,4,5].map(i => (
+                  <span key={i} style={{ color: i <= proj.review.rating ? "#F59E0B" : "#D1D5DB", fontSize: 20 }}>★</span>
+                ))}
+                <span style={{ fontSize: 13, fontWeight: 600, color: C.dark, marginLeft: 6, alignSelf: "center" }}>{proj.review.rating}/5</span>
+              </div>
+
+              {/* Comentário */}
+              <p style={{ color: C.gray, fontSize: 13, lineHeight: 1.6, margin: 0, background: C.lightGray, padding: "10px 12px", borderRadius: 10 }}>
+                "{proj.review.comment}"
+              </p>
+
+              {/* Resposta do profissional */}
+              {proj.review.reply && (
+                <div style={{ marginTop: 10, background: `${C.primary}08`, borderLeft: `3px solid ${C.primary}`, padding: "8px 12px", borderRadius: "0 8px 8px 0" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: C.primary, marginBottom: 4 }}>Resposta do profissional:</div>
+                  <p style={{ color: C.dark, fontSize: 13, margin: 0, lineHeight: 1.5 }}>{proj.review.reply}</p>
+                </div>
+              )}
+            </Card>
+          ))
+        }
+      </div>
+    );
+  };
+
+
+  // ── Notificações ───────────────────────────────
+  const Notifications = () => {
+    const [settings, setSettings] = useState({
+      newMessage:    true,
+      projectUpdate: true,
+      promotions:    false,
+      reminders:     true,
+      email:         true,
+      sms:           false,
+    });
+
+    const toggle = (key) => setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+
+    const Toggle = ({ value, onChange }) => (
+      <div onClick={onChange} style={{
+        width: 44, height: 24, borderRadius: 12,
+        background: value ? C.primary : C.border,
+        position: "relative", cursor: "pointer",
+        transition: "background 0.2s", flexShrink: 0,
+      }}>
+        <div style={{
+          position: "absolute", top: 2,
+          left: value ? 22 : 2,
+          width: 20, height: 20, borderRadius: "50%",
+          background: "#fff", transition: "left 0.2s",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+        }} />
+      </div>
+    );
+
+    const items = [
+      { key: "newMessage",    icon: "💬", label: "Novas mensagens",       desc: "Quando receber uma mensagem" },
+      { key: "projectUpdate", icon: "📋", label: "Actualizações do projecto", desc: "Mudanças de estado" },
+      { key: "reminders",     icon: "📅", label: "Lembretes de agendamento", desc: "Antes do serviço agendado" },
+      { key: "promotions",    icon: "🎁", label: "Promoções e ofertas",    desc: "Novidades e descontos" },
+      { key: "email",         icon: "📧", label: "Notificações por email", desc: "Receber por email" },
+      { key: "sms",           icon: "📱", label: "Notificações por SMS",   desc: "Receber por mensagem" },
+    ];
+
+    return (
+      <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <button onClick={() => setSection(null)} style={{ background: C.lightGray, border: "none", borderRadius: 10, padding: "8px 14px", cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>← Voltar</button>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: C.dark, margin: 0 }}>Notificações</h2>
+        </div>
+
+        <Card>
+          {items.map((item, i) => (
+            <div key={item.key}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 0" }}>
+                <span style={{ fontSize: 22, width: 32, textAlign: "center" }}>{item.icon}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, color: C.dark, fontSize: 14 }}>{item.label}</div>
+                  <div style={{ color: C.gray, fontSize: 12, marginTop: 2 }}>{item.desc}</div>
+                </div>
+                <Toggle value={settings[item.key]} onChange={() => toggle(item.key)} />
+              </div>
+              {i < items.length - 1 && <div style={{ height: 1, background: C.border }} />}
+            </div>
+          ))}
+        </Card>
+
+        <div style={{ marginTop: 16 }}>
+          <Btn onClick={() => { showSuccess("Preferências guardadas!"); setSection(null); }} full>💾 Guardar preferências</Btn>
+        </div>
+      </div>
+    );
+  };
+
+  // ── Segurança ──────────────────────────────────
+  const Security = () => {
+    const [currentPass, setCurrentPass] = useState("");
+    const [newPass,     setNewPass]     = useState("");
+    const [confirmPass, setConfirmPass] = useState("");
+    const [saving,      setSaving]      = useState(false);
+    const [error,       setError]       = useState("");
+
+    const save = async () => {
+      setError("");
+      if (!currentPass || !newPass || !confirmPass) { setError("Preencha todos os campos"); return; }
+      if (newPass !== confirmPass) { setError("As novas passwords não coincidem"); return; }
+      if (newPass.length < 6) { setError("A nova password deve ter pelo menos 6 caracteres"); return; }
+      setSaving(true);
+      try {
+        const { authAPI } = await import("./services/api");
+        await authAPI.changePassword({ currentPassword: currentPass, newPassword: newPass });
+        showSuccess("Password alterada com sucesso!");
+        setSection(null);
+      } catch (err) { setError(err.message); }
+      finally { setSaving(false); }
+    };
+
+    return (
+      <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <button onClick={() => setSection(null)} style={{ background: C.lightGray, border: "none", borderRadius: 10, padding: "8px 14px", cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>← Voltar</button>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: C.dark, margin: 0 }}>Segurança</h2>
+        </div>
+
+        <Card style={{ marginBottom: 16 }}>
+          <h4 style={{ margin: "0 0 16px", color: C.dark, fontSize: 15 }}>🔒 Alterar palavra-passe</h4>
+          {error && <div style={{ background: "#FEE2E2", color: C.error, padding: "10px 14px", borderRadius: 10, fontSize: 13, marginBottom: 12 }}>{error}</div>}
+          <Input label="Password actual"    value={currentPass} onChange={e => setCurrentPass(e.target.value)} type="password" placeholder="••••••••" />
+          <Input label="Nova password"      value={newPass}     onChange={e => setNewPass(e.target.value)}     type="password" placeholder="••••••••" />
+          <Input label="Confirmar password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} type="password" placeholder="••••••••" />
+          <Btn onClick={save} full disabled={saving}>{saving ? "A alterar..." : "Alterar password"}</Btn>
+        </Card>
+
+        <Card>
+          <h4 style={{ margin: "0 0 14px", color: C.dark, fontSize: 15 }}>🛡️ Segurança da conta</h4>
+          {[
+            { icon: "✅", label: "Email verificado",           desc: user?.email,         status: true  },
+            { icon: "📱", label: "Autenticação em dois passos", desc: "Não activado",       status: false },
+            { icon: "🔑", label: "Sessões activas",             desc: "1 dispositivo",      status: true  },
+          ].map((item, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: i < 2 ? `1px solid ${C.border}` : "none" }}>
+              <span style={{ fontSize: 20 }}>{item.icon}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, color: C.dark, fontSize: 13 }}>{item.label}</div>
+                <div style={{ color: C.gray, fontSize: 12, marginTop: 2 }}>{item.desc}</div>
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 600, color: item.status ? C.success : C.error }}>
+                {item.status ? "Activo" : "Inactivo"}
+              </span>
+            </div>
+          ))}
+        </Card>
+      </div>
+    );
+  };
+
+  // ── Ajuda ──────────────────────────────────────
+  const Help = () => {
+    const [openFaq, setOpenFaq] = useState(null);
+
+    const faqs = [
+      { q: "Como posso contratar um profissional?",       a: "Pesquise o serviço que precisa, veja os perfis dos profissionais disponíveis e clique em 'Agendar' ou 'Mensagem' para contactar." },
+      { q: "Como funciona o sistema de avaliações?",      a: "Após a conclusão de um serviço, pode avaliar o profissional com 1 a 5 estrelas e deixar um comentário. Só clientes que contrataram podem avaliar." },
+      { q: "Posso cancelar um agendamento?",              a: "Sim, pode cancelar um agendamento pendente. Para serviços já confirmados, contacte o profissional directamente pelo chat." },
+      { q: "Como altero os meus dados pessoais?",         a: "Vá ao seu Perfil → Editar Perfil e actualize as informações que desejar." },
+      { q: "Os meus dados estão seguros?",                a: "Sim, os seus dados são encriptados e protegidos. Nunca partilhamos informações pessoais sem o seu consentimento." },
+    ];
+
+    return (
+      <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <button onClick={() => setSection(null)} style={{ background: C.lightGray, border: "none", borderRadius: 10, padding: "8px 14px", cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>← Voltar</button>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: C.dark, margin: 0 }}>Ajuda</h2>
+        </div>
+
+        {/* Contacto rápido */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+          {[["💬", "Chat", "Resposta imediata"], ["📧", "Email", "buildmatch@us.edu.cv"]].map(([icon, label, desc], i) => (
+            <Card key={i} style={{ padding: 16, textAlign: "center" }}>
+              <div style={{ fontSize: 28, marginBottom: 6 }}>{icon}</div>
+              <div style={{ fontWeight: 700, color: C.dark, fontSize: 14 }}>{label}</div>
+              <div style={{ color: C.gray, fontSize: 11, marginTop: 4 }}>{desc}</div>
+            </Card>
+          ))}
+        </div>
+
+        {/* FAQ */}
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.dark, marginBottom: 12 }}>Perguntas frequentes</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {faqs.map((faq, i) => (
+            <div key={i} style={{ background: C.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+              <div onClick={() => setOpenFaq(openFaq === i ? null : i)} style={{ padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+                <span style={{ fontWeight: 600, color: C.dark, fontSize: 13, flex: 1, paddingRight: 10 }}>{faq.q}</span>
+                <span style={{ color: C.primary, fontSize: 18, transition: "transform 0.2s", transform: openFaq === i ? "rotate(180deg)" : "rotate(0deg)" }}>⌄</span>
+              </div>
+              {openFaq === i && (
+                <div style={{ padding: "0 16px 14px", color: C.gray, fontSize: 13, lineHeight: 1.6, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
+                  {faq.a}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <Card style={{ marginTop: 20, background: `${C.primary}08`, border: `1px solid ${C.primary}20` }}>
+          <p style={{ margin: 0, fontSize: 13, color: C.primary, fontWeight: 600, marginBottom: 4 }}>📞 Suporte técnico</p>
+          <p style={{ margin: 0, fontSize: 13, color: C.gray }}>Universidade de Santiago — CSAT</p>
+          <p style={{ margin: 0, fontSize: 13, color: C.gray }}>Segunda a Sexta: 08h00 — 17h00</p>
+        </Card>
+      </div>
+    );
+  };
+
+  // ── Renderizar secção activa ───────────────────
+  if (section === "edit")          return <EditProfile />;
+  if (section === "addresses")     return <Addresses />;
+  if (section === "reviews")       return <MyReviews />;
+  if (section === "notifications") return <Notifications />;
+  if (section === "security")      return <Security />;
+  if (section === "help")          return <Help />;
+
+  // ── Ecrã principal do perfil ──────────────────
+  return (
+    <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      {successMsg && <SuccessModal message={successMsg} onClose={() => setSuccessMsg(null)} />}
+
+      {/* Header */}
+      <div style={{ background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, padding: "28px 16px 50px", textAlign: "center" }}>
+        <Avatar name={user?.name} color={C.accent} size={80} />
+        <h2 style={{ color: "#fff", fontSize: 20, fontWeight: 800, marginTop: 12, marginBottom: 4 }}>{user?.name}</h2>
+        <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, margin: 0 }}>{user?.email}</p>
+        <div style={{ background: "rgba(255,255,255,0.2)", display: "inline-block", padding: "4px 16px", borderRadius: 20, marginTop: 8 }}>
+          <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>👤 Cliente</span>
+        </div>
+      </div>
+
+      <div style={{ padding: "0 16px", marginTop: -24 }}>
+        {/* Menu */}
+        <Card style={{ marginBottom: 16, padding: 8 }}>
+          {[
+            { icon: "✏️", label: "Editar perfil",        desc: "Nome, email, telefone",  key: "edit"          },
+            { icon: "📍", label: "Endereços guardados",  desc: "Gerir os seus endereços", key: "addresses"     },
+            { icon: "⭐", label: "Minhas avaliações",    desc: "Avaliações que fez",      key: "reviews"       },
+            { icon: "🔔", label: "Notificações",         desc: "Gerir alertas",           key: "notifications" },
+            { icon: "🔒", label: "Segurança",            desc: "Password e privacidade",  key: "security"      },
+            { icon: "❓", label: "Ajuda",                desc: "FAQ e suporte",           key: "help"          },
+          ].map((item, i, arr) => (
+            <div key={item.key}>
+              <div onClick={() => setSection(item.key)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 10px", cursor: "pointer", borderRadius: 10, transition: "background 0.15s" }}
+                onMouseEnter={e => e.currentTarget.style.background = C.lightGray}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+              >
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: C.lightGray, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{item.icon}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, color: C.dark, fontSize: 14 }}>{item.label}</div>
+                  <div style={{ color: C.gray, fontSize: 12, marginTop: 1 }}>{item.desc}</div>
+                </div>
+                <span style={{ color: C.gray, fontSize: 18 }}>›</span>
+              </div>
+              {i < arr.length - 1 && <div style={{ height: 1, background: C.border, marginLeft: 62 }} />}
+            </div>
+          ))}
+        </Card>
+
+        {/* Versão */}
+        <p style={{ textAlign: "center", color: C.gray, fontSize: 12, marginBottom: 16 }}>
+          BuildMatch v1.0.0 — Universidade de Santiago
+        </p>
+
+        <Btn onClick={onLogout} full variant="danger" style={{ marginBottom: 32 }}>Terminar sessão</Btn>
       </div>
     </div>
-    <div style={{ padding: "0 16px", marginTop: -24 }}>
-      <Card style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 13, color: C.gray, marginBottom: 4 }}>Email</div>
-        <div style={{ fontWeight: 600, color: C.dark }}>{user?.email}</div>
-      </Card>
-      {[["✏️", "Editar perfil"], ["📍", "Endereços guardados"], ["⭐", "Minhas avaliações"], ["🔔", "Notificações"], ["🔒", "Segurança"], ["❓", "Ajuda"]].map(([icon, label], i) => (
-        <div key={i} style={{ background: C.white, borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: 6, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-          <span style={{ fontSize: 20 }}>{icon}</span>
-          <span style={{ flex: 1, fontWeight: 500, color: C.dark, fontSize: 14 }}>{label}</span>
-          <span style={{ color: C.gray }}>›</span>
-        </div>
-      ))}
-      <div style={{ marginTop: 16, marginBottom: 32 }}><Btn onClick={onLogout} full variant="danger">Terminar sessão</Btn></div>
-    </div>
-  </div>
-);
-
+  );
+};
 // ============================================================
 // ██  PAINEL DO PROFISSIONAL  ██
 // ============================================================

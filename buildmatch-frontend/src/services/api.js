@@ -93,3 +93,11 @@ export const usersAPI = {
   get:    (id)       => request(`/api/users/${id}`),
   update: (id, body) => request(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
 };
+
+// ── ADDRESSES ──────────────────────────────────────
+export const addressesAPI = {
+  list:      ()         => request('/api/addresses'),
+  create:    (body)     => request('/api/addresses',      { method: 'POST',   body: JSON.stringify(body) }),
+  update:    (id, body) => request(`/api/addresses/${id}`, { method: 'PUT',    body: JSON.stringify(body) }),
+  delete:    (id)       => request(`/api/addresses/${id}`, { method: 'DELETE' }),
+};

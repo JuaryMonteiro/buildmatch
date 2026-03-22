@@ -35,6 +35,7 @@ model User {
   phone       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  addresses Address[]
 
   professional    Professional?
   projectsClient  Project[]     @relation("ClientProjects")
@@ -142,4 +143,14 @@ model Portfolio {
   createdAt      DateTime @default(now())
 
   professional Professional @relation(fields: [professionalId], references: [id])
+}
+model Address {
+  id        String   @id @default(uuid())
+  userId    String
+  label     String
+  address   String
+  default   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }
