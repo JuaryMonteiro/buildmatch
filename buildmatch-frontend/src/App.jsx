@@ -981,12 +981,19 @@ const ClientProfile = ({ user, onLogout }) => {
 // ██  PAINEL DO PROFISSIONAL  ██
 // ============================================================
 const ProfNav = ({ active, onChange }) => (
-  <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#1a1a2e", borderTop: `2px solid ${C.accent}`, display: "flex", zIndex: 100, padding: "8px 0 4px" }}>
-    {[["dashboard", "📊", "Dashboard"], ["projects", "📋", "Projectos"], ["agenda", "📅", "Agenda"], ["portfolio", "🖼️", "Portfólio"], ["profile", "👷", "Perfil"]].map(([id, icon, label]) => (
-      <button key={id} onClick={() => onChange(id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}>
-        <span style={{ fontSize: 22 }}>{icon}</span>
-        <span style={{ fontSize: 10, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", color: active === id ? C.accent : "#9CA3AF" }}>{label}</span>
-        {active === id && <div style={{ width: 20, height: 3, borderRadius: 2, background: C.accent }} />}
+  <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#1a1a2e", borderTop: `2px solid ${C.accent}`, display: "flex", zIndex: 100, padding: "6px 0 4px" }}>
+    {[
+      ["dashboard", "📊", "Dashboard"],
+      ["projects",  "📋", "Projectos"],
+      ["messages",  "💬", "Mensagens"],
+      ["agenda",    "📅", "Agenda"   ],
+      ["portfolio", "🖼️", "Portfólio"],
+      ["profile",   "👷", "Perfil"   ],
+    ].map(([id, icon, label]) => (
+      <button key={id} onClick={() => onChange(id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, background: "none", border: "none", cursor: "pointer", padding: "4px 0", minWidth: 0 }}>
+        <span style={{ fontSize: 20 }}>{icon}</span>
+        <span style={{ fontSize: 9, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", color: active === id ? C.accent : "#9CA3AF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", paddingLeft: 2, paddingRight: 2 }}>{label}</span>
+        {active === id && <div style={{ width: 16, height: 3, borderRadius: 2, background: C.accent }} />}
       </button>
     ))}
   </div>
@@ -1221,16 +1228,536 @@ const ProfPortfolio = ({ user }) => {
   );
 };
 
+// ============================================================
+// SUBSTITUA O COMPONENTE ProfProfile no seu App.jsx
+// ============================================================
+
 const ProfProfile = ({ user, onLogout }) => {
+  const [section,    setSection]    = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
+
+  const showSuccess = (msg) => {
+    setSuccessMsg(msg);
+    setTimeout(() => setSuccessMsg(null), 3000);
+  };
+
+  // ── Toggle reutilizável ────────────────────────
+  const Toggle = ({ value, onChange }) => (
+    <div onClick={onChange} style={{
+      width: 44, height: 24, borderRadius: 12,
+      background: value ? C.accent : C.border,
+      position: "relative", cursor: "pointer",
+      transition: "background 0.2s", flexShrink: 0,
+    }}>
+      <div style={{
+        position: "absolute", top: 2,
+        left: value ? 22 : 2,
+        width: 20, height: 20, borderRadius: "50%",
+        background: "#fff", transition: "left 0.2s",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+      }} />
+    </div>
+  );
+
+  const BackBtn = () => (
+    <button onClick={() => setSection(null)} style={{
+      background: "#2a2a3e", border: "none", borderRadius: 10,
+      padding: "8px 14px", cursor: "pointer", fontSize: 14,
+      fontFamily: "'DM Sans', sans-serif", color: "#fff",
+    }}>← Voltar</button>
+  );
+
+  // ── 1. EDITAR PERFIL PROFISSIONAL ─────────────
+  const EditProfProfile = () => {
+    const prof = user?.professional || {};
+    const [name,      setName]      = useState(user?.name      || "");
+    const [phone,     setPhone]     = useState(user?.phone     || "");
+    const [specialty, setSpecialty] = useState(prof.specialty  || "");
+    const [location,  setLocation]  = useState(prof.location   || "");
+    const [about,     setAbout]     = useState(prof.about      || "");
+    const [priceMin,  setPriceMin]  = useState(prof.priceMin   || "");
+    const [priceMax,  setPriceMax]  = useState(prof.priceMax   || "");
+    const [experience,setExp]       = useState(prof.experience || "");
+    const [tags,      setTags]      = useState(prof.tags       || "");
+    const [available, setAvailable] = useState(prof.available  ?? true);
+    const [saving,    setSaving]    = useState(false);
+
+    const SPECIALTIES = ["Pedreiro","Eletricista","Canalizador","Pintor","Carpinteiro","Engenheiro Civil","Arquiteto","Serralheiro","Pintor","Tecladista"];
+
+    const save = async () => {
+      setSaving(true);
+      try {
+        const { usersAPI, professionalsAPI } = await import("./services/api");
+        await usersAPI.update(user.id, { name, phone });
+        if (prof.id) {
+          await professionalsAPI.update(prof.id, {
+            specialty, location, about, available,
+            priceMin: parseFloat(priceMin) || null,
+            priceMax: parseFloat(priceMax) || null,
+            experience: parseInt(experience) || 0,
+            tags,
+          });
+        }
+        const updatedUser = { ...user, name, phone, professional: { ...prof, specialty, location, about, available, priceMin, priceMax, experience, tags } };
+        localStorage.setItem("buildmatch_user", JSON.stringify(updatedUser));
+        showSuccess("Perfil actualizado com sucesso!");
+        setSection(null);
+      } catch (err) { alert(err.message); }
+      finally { setSaving(false); }
+    };
+
+    return (
+      <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <BackBtn />
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: C.dark, margin: 0 }}>Editar Perfil</h2>
+        </div>
+
+        {/* Avatar */}
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div style={{ position: "relative", display: "inline-block" }}>
+            <Avatar name={name} color={C.accent} size={88} />
+            <button style={{ position: "absolute", bottom: 0, right: 0, background: C.accent, border: "none", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", color: "#fff", fontSize: 14 }}>✏️</button>
+          </div>
+        </div>
+
+        {/* Dados pessoais */}
+        <Card style={{ marginBottom: 14 }}>
+          <h4 style={{ margin: "0 0 14px", color: C.dark, fontSize: 14, fontWeight: 700 }}>👤 Dados pessoais</h4>
+          <Input label="Nome completo" value={name}  onChange={e => setName(e.target.value)}  placeholder="Seu nome" />
+          <Input label="Telefone"      value={phone} onChange={e => setPhone(e.target.value)} type="tel" placeholder="+238 991 0000" />
+        </Card>
+
+        {/* Dados profissionais */}
+        <Card style={{ marginBottom: 14 }}>
+          <h4 style={{ margin: "0 0 14px", color: C.dark, fontSize: 14, fontWeight: 700 }}>🔨 Dados profissionais</h4>
+
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: C.dark, display: "block", marginBottom: 6 }}>Especialidade</label>
+            <select value={specialty} onChange={e => setSpecialty(e.target.value)}
+              style={{ width: "100%", padding: "12px 14px", border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontFamily: "'DM Sans', sans-serif", outline: "none", background: C.white }}>
+              <option value="">Seleccionar especialidade</option>
+              {SPECIALTIES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+
+          <Input label="Localização" value={location} onChange={e => setLocation(e.target.value)} placeholder="Ex: Praia, Santiago" />
+          <Input label="Anos de experiência" value={experience} onChange={e => setExp(e.target.value)} type="number" placeholder="Ex: 5" />
+          <Input label="Tags (separadas por vírgula)" value={tags} onChange={e => setTags(e.target.value)} placeholder="Ex: Residencial, Restauro" />
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}><Input label="Preço mín. (CVE/h)" value={priceMin} onChange={e => setPriceMin(e.target.value)} type="number" placeholder="500" /></div>
+            <div style={{ flex: 1 }}><Input label="Preço máx. (CVE/h)" value={priceMax} onChange={e => setPriceMax(e.target.value)} type="number" placeholder="1000" /></div>
+          </div>
+
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: C.dark, display: "block", marginBottom: 6 }}>Sobre mim</label>
+            <textarea value={about} onChange={e => setAbout(e.target.value)} placeholder="Descreva a sua experiência e serviços..."
+              style={{ width: "100%", border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 12, fontSize: 14, fontFamily: "'DM Sans', sans-serif", resize: "vertical", minHeight: 100, outline: "none", boxSizing: "border-box" }} />
+          </div>
+
+          {/* Disponibilidade */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderTop: `1px solid ${C.border}` }}>
+            <div>
+              <div style={{ fontWeight: 600, color: C.dark, fontSize: 14 }}>Disponível para serviços</div>
+              <div style={{ color: C.gray, fontSize: 12, marginTop: 2 }}>{available ? "Aparece nas pesquisas" : "Oculto das pesquisas"}</div>
+            </div>
+            <Toggle value={available} onChange={() => setAvailable(!available)} />
+          </div>
+        </Card>
+
+        <Btn onClick={save} full variant="accent" disabled={saving}>
+          {saving ? "A guardar..." : "💾 Guardar alterações"}
+        </Btn>
+      </div>
+    );
+  };
+
+  // ── 2. ALTERAR PALAVRA-PASSE ───────────────────
+  const ChangePassword = () => {
+    const [currentPass, setCurrentPass] = useState("");
+    const [newPass,     setNewPass]     = useState("");
+    const [confirmPass, setConfirmPass] = useState("");
+    const [saving,      setSaving]      = useState(false);
+    const [error,       setError]       = useState("");
+
+    const save = async () => {
+      setError("");
+      if (!currentPass || !newPass || !confirmPass) { setError("Preencha todos os campos"); return; }
+      if (newPass !== confirmPass) { setError("As novas passwords não coincidem"); return; }
+      if (newPass.length < 6) { setError("A nova password deve ter mínimo 6 caracteres"); return; }
+      setSaving(true);
+      try {
+        const { authAPI } = await import("./services/api");
+        await authAPI.changePassword({ currentPassword: currentPass, newPassword: newPass });
+        showSuccess("Password alterada com sucesso!");
+        setSection(null);
+      } catch (err) { setError(err.message); }
+      finally { setSaving(false); }
+    };
+
+    return (
+      <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <BackBtn />
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: C.dark, margin: 0 }}>Alterar Password</h2>
+        </div>
+        <Card>
+          {error && <div style={{ background: "#FEE2E2", color: C.error, padding: "10px 14px", borderRadius: 10, fontSize: 13, marginBottom: 12 }}>{error}</div>}
+          <Input label="Password actual"    value={currentPass} onChange={e => setCurrentPass(e.target.value)} type="password" placeholder="••••••••" />
+          <Input label="Nova password"      value={newPass}     onChange={e => setNewPass(e.target.value)}     type="password" placeholder="••••••••" />
+          <Input label="Confirmar password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} type="password" placeholder="••••••••" />
+          <Btn onClick={save} full variant="accent" disabled={saving}>{saving ? "A alterar..." : "🔒 Alterar password"}</Btn>
+        </Card>
+
+        <Card style={{ marginTop: 14, background: `${C.primary}08`, border: `1px solid ${C.primary}20` }}>
+          {[["✅","Email verificado", user?.email, true],["🔑","Sessões activas","1 dispositivo", true],["📱","Autenticação 2 passos","Não activado", false]].map(([icon, label, desc, status], i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: i < 2 ? `1px solid ${C.border}` : "none" }}>
+              <span style={{ fontSize: 18 }}>{icon}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, color: C.dark, fontSize: 13 }}>{label}</div>
+                <div style={{ color: C.gray, fontSize: 12 }}>{desc}</div>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: status ? C.success : C.error }}>{status ? "Activo" : "Inactivo"}</span>
+            </div>
+          ))}
+        </Card>
+      </div>
+    );
+  };
+
+  // ── 3. NOTIFICAÇÕES ────────────────────────────
+  const Notifications = () => {
+    const [settings, setSettings] = useState({
+      newProject:   true,
+      newMessage:   true,
+      newReview:    true,
+      reminders:    true,
+      promotions:   false,
+      email:        true,
+      sms:          false,
+    });
+    const toggle = (key) => setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+
+    const items = [
+      { key: "newProject",  icon: "📋", label: "Novos projectos",          desc: "Quando um cliente solicitar serviço" },
+      { key: "newMessage",  icon: "💬", label: "Novas mensagens",          desc: "Quando receber uma mensagem" },
+      { key: "newReview",   icon: "⭐", label: "Novas avaliações",         desc: "Quando um cliente avaliar" },
+      { key: "reminders",   icon: "📅", label: "Lembretes de agendamento", desc: "Antes do serviço agendado" },
+      { key: "promotions",  icon: "🎁", label: "Novidades BuildMatch",     desc: "Actualizações da plataforma" },
+      { key: "email",       icon: "📧", label: "Notificações por email",   desc: "Receber alertas por email" },
+      { key: "sms",         icon: "📱", label: "Notificações por SMS",     desc: "Receber alertas por SMS" },
+    ];
+
+    return (
+      <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <BackBtn />
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: C.dark, margin: 0 }}>Notificações</h2>
+        </div>
+        <Card>
+          {items.map((item, i) => (
+            <div key={item.key}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 0" }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: C.lightGray, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{item.icon}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, color: C.dark, fontSize: 14 }}>{item.label}</div>
+                  <div style={{ color: C.gray, fontSize: 12, marginTop: 2 }}>{item.desc}</div>
+                </div>
+                <Toggle value={settings[item.key]} onChange={() => toggle(item.key)} />
+              </div>
+              {i < items.length - 1 && <div style={{ height: 1, background: C.border }} />}
+            </div>
+          ))}
+        </Card>
+        <div style={{ marginTop: 16 }}>
+          <Btn onClick={() => { showSuccess("Preferências guardadas!"); setSection(null); }} full variant="accent">💾 Guardar preferências</Btn>
+        </div>
+      </div>
+    );
+  };
+
+  // ── 4. ESTATÍSTICAS ────────────────────────────
+  const Statistics = () => {
+    const [projects, setProjects] = useState([]);
+    const [loading,  setL]        = useState(true);
+
+    useEffect(() => {
+      projectsAPI.list()
+        .then(d => setProjects(d.data || []))
+        .catch(() => setProjects([]))
+        .finally(() => setL(false));
+    }, []);
+
+    const completed = projects.filter(p => p.status === "COMPLETED").length;
+    const active    = projects.filter(p => p.status === "ACTIVE").length;
+    const pending   = projects.filter(p => p.status === "PENDING").length;
+    const total     = projects.length;
+    const revenue   = projects.filter(p => p.status === "COMPLETED").reduce((sum, p) => sum + (p.amount || 0), 0);
+    const prof      = user?.professional;
+    const convRate  = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    const StatItem = ({ icon, label, value, color = C.primary, sub }) => (
+      <Card style={{ padding: 16, textAlign: "center" }}>
+        <div style={{ fontSize: 28, marginBottom: 6 }}>{icon}</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color }}>{value}</div>
+        <div style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>{label}</div>
+        {sub && <div style={{ fontSize: 11, color: C.gray, marginTop: 4 }}>{sub}</div>}
+      </Card>
+    );
+
+    return (
+      <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <BackBtn />
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: C.dark, margin: 0 }}>Estatísticas</h2>
+        </div>
+
+        {loading ? <Spinner /> : (
+          <>
+            {/* Stats principais */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+              <StatItem icon="📋" label="Total projectos"  value={total}     color={C.primary} />
+              <StatItem icon="✓"  label="Concluídos"       value={completed} color={C.success} />
+              <StatItem icon="⟳"  label="Em andamento"     value={active}    color={C.accent}  />
+              <StatItem icon="◷"  label="Pendentes"        value={pending}   color="#F59E0B"   />
+            </div>
+
+            {/* Receita e avaliação */}
+            <Card style={{ marginBottom: 14 }}>
+              <h4 style={{ margin: "0 0 14px", color: C.dark, fontSize: 14 }}>💰 Receita total</h4>
+              <div style={{ fontSize: 28, fontWeight: 800, color: C.accent }}>{revenue.toLocaleString()} CVE</div>
+              <div style={{ color: C.gray, fontSize: 13, marginTop: 4 }}>Baseado em {completed} projectos concluídos</div>
+            </Card>
+
+            <Card style={{ marginBottom: 14 }}>
+              <h4 style={{ margin: "0 0 14px", color: C.dark, fontSize: 14 }}>⭐ Avaliação e reputação</h4>
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 36, fontWeight: 800, color: "#F59E0B" }}>{prof?.rating?.toFixed(1) || "0.0"}</div>
+                  <div style={{ display: "flex", gap: 2, justifyContent: "center", marginTop: 4 }}>
+                    {[1,2,3,4,5].map(i => <span key={i} style={{ color: i <= Math.floor(prof?.rating || 0) ? "#F59E0B" : "#D1D5DB", fontSize: 16 }}>★</span>)}
+                  </div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  {[5,4,3,2,1].map(star => {
+                    const pct = prof?.reviewCount > 0 ? Math.round((star === Math.floor(prof?.rating || 0) ? 70 : star > 3 ? 20 : 10)) : 0;
+                    return (
+                      <div key={star} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 11, color: C.gray, width: 12 }}>{star}</span>
+                        <div style={{ flex: 1, height: 6, background: C.lightGray, borderRadius: 3, overflow: "hidden" }}>
+                          <div style={{ width: `${pct}%`, height: "100%", background: "#F59E0B", borderRadius: 3 }} />
+                        </div>
+                        <span style={{ fontSize: 11, color: C.gray, width: 24 }}>{pct}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}`, display: "flex", gap: 20 }}>
+                <div><div style={{ fontSize: 18, fontWeight: 800, color: C.primary }}>{prof?.reviewCount || 0}</div><div style={{ fontSize: 12, color: C.gray }}>Avaliações</div></div>
+                <div><div style={{ fontSize: 18, fontWeight: 800, color: C.success }}>{convRate}%</div><div style={{ fontSize: 12, color: C.gray }}>Taxa de conversão</div></div>
+                <div><div style={{ fontSize: 18, fontWeight: 800, color: C.accent }}>{prof?.experience || 0}</div><div style={{ fontSize: 12, color: C.gray }}>Anos exp.</div></div>
+              </div>
+            </Card>
+
+            {/* Dica */}
+            <div style={{ background: `${C.accent}10`, borderRadius: 14, padding: 16, border: `1px solid ${C.accent}30` }}>
+              <p style={{ margin: 0, fontSize: 13, color: C.accentDark || C.accent, fontWeight: 600, marginBottom: 4 }}>💡 Dica para melhorar</p>
+              <p style={{ margin: 0, fontSize: 13, color: C.gray, lineHeight: 1.5 }}>
+                {convRate < 50 ? "Actualize o seu portfólio e responda rapidamente às mensagens para aumentar a sua taxa de conversão." : "Excelente desempenho! Continue a responder rapidamente e a manter o portfólio actualizado."}
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  // ── 5. AVALIAÇÕES RECEBIDAS ────────────────────
+  const MyReviews = () => {
+    const [reviews, setReviews] = useState([]);
+    const [loading, setL]       = useState(true);
+    const [reply,   setReply]   = useState({});
+    const [saving,  setSaving]  = useState(null);
+
+    useEffect(() => {
+      const prof = user?.professional;
+      if (!prof?.id) { setL(false); return; }
+      import("./services/api").then(({ reviewsAPI }) =>
+        reviewsAPI.list(prof.id)
+          .then(d => setReviews(d.data || []))
+          .catch(() => setReviews([]))
+          .finally(() => setL(false))
+      );
+    }, []);
+
+    const submitReply = async (reviewId) => {
+      if (!reply[reviewId]?.trim()) return;
+      setSaving(reviewId);
+      try {
+        const { reviewsAPI } = await import("./services/api");
+        await reviewsAPI.reply(reviewId, reply[reviewId]);
+        setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, reply: reply[reviewId] } : r));
+        setReply(prev => ({ ...prev, [reviewId]: "" }));
+        showSuccess("Resposta enviada com sucesso!");
+      } catch (err) { alert(err.message); }
+      finally { setSaving(null); }
+    };
+
+    return (
+      <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <BackBtn />
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: C.dark, margin: 0 }}>Avaliações Recebidas</h2>
+        </div>
+
+        {/* Resumo */}
+        <Card style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 32, fontWeight: 800, color: "#F59E0B" }}>{user?.professional?.rating?.toFixed(1) || "0.0"}</div>
+            <div style={{ display: "flex", gap: 2, justifyContent: "center" }}>
+              {[1,2,3,4,5].map(i => <span key={i} style={{ color: i <= Math.floor(user?.professional?.rating || 0) ? "#F59E0B" : "#D1D5DB", fontSize: 14 }}>★</span>)}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, color: C.dark }}>{user?.professional?.reviewCount || 0} avaliações no total</div>
+            <div style={{ color: C.gray, fontSize: 13, marginTop: 4 }}>Clique em "Responder" para responder a uma avaliação</div>
+          </div>
+        </Card>
+
+        {loading ? <Spinner /> : reviews.length === 0
+          ? <div style={{ textAlign: "center", padding: 48, color: C.gray }}><div style={{ fontSize: 48 }}>⭐</div><p>Ainda não tem avaliações</p></div>
+          : reviews.map(r => (
+            <Card key={r.id} style={{ marginBottom: 12 }}>
+              {/* Cabeçalho */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <Avatar name={r.author?.name || "Cliente"} size={38} />
+                  <div>
+                    <div style={{ fontWeight: 700, color: C.dark, fontSize: 14 }}>{r.author?.name || "Cliente"}</div>
+                    <div style={{ color: C.gray, fontSize: 12 }}>{new Date(r.createdAt).toLocaleDateString("pt", { day: "numeric", month: "long", year: "numeric" })}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 2 }}>
+                  {[1,2,3,4,5].map(i => <span key={i} style={{ color: i <= r.rating ? "#F59E0B" : "#D1D5DB", fontSize: 16 }}>★</span>)}
+                </div>
+              </div>
+
+              {/* Comentário */}
+              <p style={{ color: C.gray, fontSize: 13, lineHeight: 1.6, margin: "0 0 10px", background: C.lightGray, padding: "10px 12px", borderRadius: 10 }}>
+                "{r.comment}"
+              </p>
+
+              {/* Resposta existente */}
+              {r.reply && (
+                <div style={{ background: `${C.accent}10`, borderLeft: `3px solid ${C.accent}`, padding: "8px 12px", borderRadius: "0 8px 8px 0", marginBottom: 10 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: C.accent, marginBottom: 4 }}>A sua resposta:</div>
+                  <p style={{ color: C.dark, fontSize: 13, margin: 0, lineHeight: 1.5 }}>{r.reply}</p>
+                </div>
+              )}
+
+              {/* Campo de resposta */}
+              {!r.reply && (
+                <div>
+                  <textarea
+                    value={reply[r.id] || ""}
+                    onChange={e => setReply(prev => ({ ...prev, [r.id]: e.target.value }))}
+                    placeholder="Escreva a sua resposta a esta avaliação..."
+                    style={{ width: "100%", border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 10, fontSize: 13, fontFamily: "'DM Sans', sans-serif", resize: "vertical", minHeight: 70, outline: "none", boxSizing: "border-box", marginBottom: 8 }}
+                  />
+                  <Btn onClick={() => submitReply(r.id)} variant="accent" small disabled={saving === r.id || !reply[r.id]?.trim()}>
+                    {saving === r.id ? "A enviar..." : "↩ Responder"}
+                  </Btn>
+                </div>
+              )}
+            </Card>
+          ))
+        }
+      </div>
+    );
+  };
+
+  // ── 6. AJUDA ───────────────────────────────────
+  const Help = () => {
+    const [openFaq, setOpenFaq] = useState(null);
+
+    const faqs = [
+      { q: "Como apareço nas pesquisas dos clientes?", a: "O seu perfil aparece automaticamente quando está disponível. Active a opção 'Disponível para serviços' no Editar Perfil e mantenha o portfólio actualizado." },
+      { q: "Como aceito um projecto?",                 a: "Vá ao separador Projectos → Pendentes e clique em 'Aceitar'. O cliente será notificado automaticamente." },
+      { q: "Como respondo a uma avaliação?",           a: "Vá ao seu Perfil → Avaliações Recebidas. Encontre a avaliação e escreva a sua resposta no campo disponível." },
+      { q: "Como adiciono fotos ao meu portfólio?",    a: "Vá ao separador Portfólio e clique em '➕ Adicionar'. Preencha o título, categoria e descrição do projecto." },
+      { q: "Como funciona o sistema de avaliação?",    a: "Apenas clientes que contrataram os seus serviços podem avaliar. A avaliação fica disponível após conclusão do projecto." },
+      { q: "Como gestão os horários disponíveis?",     a: "Vá ao separador Agenda e adicione os dias e horários em que está disponível. Os clientes verão essa disponibilidade ao agendar." },
+    ];
+
+    return (
+      <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <BackBtn />
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: C.dark, margin: 0 }}>Ajuda</h2>
+        </div>
+
+        {/* Contacto rápido */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+          {[["💬","Chat","Resposta imediata"],["📧","Email","buildmatch@us.edu.cv"]].map(([icon, label, desc], i) => (
+            <Card key={i} style={{ padding: 16, textAlign: "center" }}>
+              <div style={{ fontSize: 28, marginBottom: 6 }}>{icon}</div>
+              <div style={{ fontWeight: 700, color: C.dark, fontSize: 14 }}>{label}</div>
+              <div style={{ color: C.gray, fontSize: 11, marginTop: 4 }}>{desc}</div>
+            </Card>
+          ))}
+        </div>
+
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.dark, marginBottom: 12 }}>Perguntas frequentes</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {faqs.map((faq, i) => (
+            <div key={i} style={{ background: C.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+              <div onClick={() => setOpenFaq(openFaq === i ? null : i)} style={{ padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+                <span style={{ fontWeight: 600, color: C.dark, fontSize: 13, flex: 1, paddingRight: 10 }}>{faq.q}</span>
+                <span style={{ color: C.accent, fontSize: 18, transition: "transform 0.2s", transform: openFaq === i ? "rotate(180deg)" : "rotate(0deg)", display: "inline-block" }}>⌄</span>
+              </div>
+              {openFaq === i && (
+                <div style={{ padding: "0 16px 14px", color: C.gray, fontSize: 13, lineHeight: 1.6, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>{faq.a}</div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <Card style={{ marginTop: 20, background: `${C.accent}08`, border: `1px solid ${C.accent}20` }}>
+          <p style={{ margin: 0, fontSize: 13, color: C.accent, fontWeight: 600, marginBottom: 4 }}>📞 Suporte técnico</p>
+          <p style={{ margin: 0, fontSize: 13, color: C.gray }}>Universidade de Santiago — CSAT</p>
+          <p style={{ margin: 0, fontSize: 13, color: C.gray }}>Segunda a Sexta: 08h00 — 17h00</p>
+        </Card>
+      </div>
+    );
+  };
+
+  // ── Renderizar secção activa ───────────────────
+  if (section === "edit")          return <EditProfProfile />;
+  if (section === "password")      return <ChangePassword />;
+  if (section === "notifications") return <Notifications />;
+  if (section === "stats")         return <Statistics />;
+  if (section === "reviews")       return <MyReviews />;
+  if (section === "help")          return <Help />;
+
+  // ── Ecrã principal do perfil profissional ─────
   const prof = user?.professional;
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      {successMsg && <SuccessModal message={successMsg} onClose={() => setSuccessMsg(null)} />}
+
+      {/* Header escuro */}
       <div style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)", padding: "28px 16px 50px", textAlign: "center" }}>
         <Avatar name={user?.name} color={C.accent} size={80} />
         <h2 style={{ color: "#fff", fontSize: 20, fontWeight: 800, marginTop: 12, marginBottom: 4 }}>{user?.name}</h2>
-        <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, margin: 0 }}>{prof?.specialty || "Profissional"}</p>
-        <div style={{ display: "flex", justifyContent: "center", gap: 24, marginTop: 16 }}>
-          {[[prof?.rating?.toFixed(1) || "0.0", "Avaliação"], [prof?.reviewCount || 0, "Avaliações"], [prof?.experience || 0, "Anos exp."]].map(([v, l], i) => (
+        <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, margin: 0 }}>{prof?.specialty || "Profissional"}</p>
+        <div style={{ background: C.accent, display: "inline-block", padding: "4px 16px", borderRadius: 20, marginTop: 8 }}>
+          <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>🔨 PRO</span>
+        </div>
+        {/* Stats rápidas */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 28, marginTop: 16 }}>
+          {[[prof?.rating?.toFixed(1)||"0.0","Avaliação"],[prof?.reviewCount||0,"Avaliações"],[prof?.experience||0,"Anos"]].map(([v,l],i) => (
             <div key={i} style={{ textAlign: "center" }}>
               <div style={{ color: "#fff", fontWeight: 800, fontSize: 18 }}>{v}</div>
               <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>{l}</div>
@@ -1238,23 +1765,48 @@ const ProfProfile = ({ user, onLogout }) => {
           ))}
         </div>
       </div>
+
       <div style={{ padding: "0 16px", marginTop: -24 }}>
-        <Card style={{ marginBottom: 16 }}>
-          {[["Email", user?.email], ["Localização", prof?.location ? `📍 ${prof.location}` : null], ["Especialidade", prof?.specialty]].filter(([, v]) => v).map(([l, v], i) => (
-            <div key={i} style={{ marginBottom: i < 2 ? 12 : 0 }}>
-              <div style={{ fontSize: 12, color: C.gray }}>{l}</div>
-              <div style={{ fontWeight: 600, color: C.dark, marginTop: 2 }}>{v}</div>
+        {/* Status disponibilidade */}
+        <Card style={{ marginBottom: 14, padding: 14, display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 12, height: 12, borderRadius: "50%", background: prof?.available ? C.success : C.error, flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, color: C.dark, fontSize: 14 }}>{prof?.available ? "Disponível para serviços" : "Indisponível"}</div>
+            <div style={{ color: C.gray, fontSize: 12 }}>{prof?.available ? "Apareço nas pesquisas dos clientes" : "Oculto das pesquisas"}</div>
+          </div>
+          <Btn onClick={() => setSection("edit")} variant="ghost" small>Editar</Btn>
+        </Card>
+
+        {/* Menu */}
+        <Card style={{ marginBottom: 14, padding: 8 }}>
+          {[
+            { icon: "✏️", label: "Editar perfil",          desc: "Especialidade, preços, localização", key: "edit"          },
+            { icon: "📊", label: "Estatísticas",            desc: "Projectos, receita, avaliações",    key: "stats"         },
+            { icon: "⭐", label: "Avaliações recebidas",   desc: "Ver e responder avaliações",         key: "reviews"       },
+            { icon: "🔔", label: "Notificações",            desc: "Gerir alertas e avisos",             key: "notifications" },
+            { icon: "🔒", label: "Alterar password",        desc: "Segurança da conta",                key: "password"      },
+            { icon: "❓", label: "Ajuda",                   desc: "FAQ e suporte técnico",              key: "help"          },
+          ].map((item, i, arr) => (
+            <div key={item.key}>
+              <div onClick={() => setSection(item.key)}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 10px", cursor: "pointer", borderRadius: 10 }}
+                onMouseEnter={e => e.currentTarget.style.background = C.lightGray}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+              >
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: `${C.accent}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{item.icon}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, color: C.dark, fontSize: 14 }}>{item.label}</div>
+                  <div style={{ color: C.gray, fontSize: 12, marginTop: 1 }}>{item.desc}</div>
+                </div>
+                <span style={{ color: C.gray, fontSize: 18 }}>›</span>
+              </div>
+              {i < arr.length - 1 && <div style={{ height: 1, background: C.border, marginLeft: 62 }} />}
             </div>
           ))}
         </Card>
-        {[["✏️", "Editar perfil"], ["🔔", "Notificações"], ["🔒", "Segurança"], ["❓", "Ajuda"]].map(([icon, label], i) => (
-          <div key={i} style={{ background: C.white, borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: 6, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-            <span style={{ fontSize: 20 }}>{icon}</span>
-            <span style={{ flex: 1, fontWeight: 500, color: C.dark, fontSize: 14 }}>{label}</span>
-            <span style={{ color: C.gray }}>›</span>
-          </div>
-        ))}
-        <div style={{ marginTop: 16, marginBottom: 32 }}><Btn onClick={onLogout} full variant="danger">Terminar sessão</Btn></div>
+
+        <p style={{ textAlign: "center", color: C.gray, fontSize: 12, marginBottom: 14 }}>BuildMatch v1.0.0 — Universidade de Santiago</p>
+        <Btn onClick={onLogout} full variant="danger" style={{ marginBottom: 32 }}>Terminar sessão</Btn>
       </div>
     </div>
   );
@@ -1262,10 +1814,6 @@ const ProfProfile = ({ user, onLogout }) => {
 
 // ============================================================
 // CHAT (partilhado)
-// ============================================================
-// ============================================================
-// SUBSTITUA APENAS ESTE COMPONENTE NO SEU App.jsx
-// Encontre "const ChatScreen" e substitua tudo até ao próximo componente
 // ============================================================
 
 const ChatScreen = ({ conversation, user, onBack }) => {
@@ -1645,7 +2193,38 @@ export default function BuildMatchApp() {
     <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: C.lightGray }}>
       <div style={{ overflowY: "auto" }}>
         <ProfessionalProfile prof={selectedProf} onBack={() => setSelectedProf(null)}
-          onMessage={() => { setSelectedProf(null); setClientTab("messages"); }}
+          onMessage={async () => {
+            try {
+              // Criar projecto de contacto automaticamente
+              const project = await projectsAPI.create({
+                title: `Contacto — ${selectedProf.specialty}`,
+                professionalId: selectedProf.id,
+                description: "Conversa iniciada pelo cliente",
+              });
+
+              setSelectedProf(null);
+
+              // Abrir chat directamente
+              setOpenChat({
+                id: project.id,
+                title: `Contacto — ${selectedProf.specialty}`,
+                professional: selectedProf,
+              });
+            } catch (err) {
+              // Se já existe conversa, tentar encontrar a existente
+              const data = await messagesAPI.conversations().catch(() => ({ data: [] }));
+              const existing = (data.data || []).find(c =>
+                c.professional?.id === selectedProf.id ||
+                c.professionalId  === selectedProf.id
+              );
+              if (existing) {
+                setSelectedProf(null);
+                setOpenChat(existing);
+              } else {
+                alert("Erro ao iniciar conversa: " + err.message);
+              }
+            }
+          }}
           onSchedule={() => { const p = selectedProf; setSelectedProf(null); setScheduleFor(p); }} />
       </div>
       {successMsg && <SuccessModal message={successMsg} onClose={() => setSuccessMsg(null)} />}
@@ -1657,10 +2236,11 @@ export default function BuildMatchApp() {
     const renderPro = () => {
       switch (profTab) {
         case "dashboard": return <ProfDashboard user={user} />;
-        case "projects": return <ProfProjects />;
-        case "agenda": return <ProfAgenda user={user} />;
+        case "projects":  return <ProfProjects />;
+        case "messages":  return <ClientMessages onOpenChat={setOpenChat} />;
+        case "agenda":    return <ProfAgenda user={user} />;
         case "portfolio": return <ProfPortfolio user={user} />;
-        case "profile": return <ProfProfile user={user} onLogout={logout} />;
+        case "profile":   return <ProfProfile user={user} onLogout={logout} />;
         default: return null;
       }
     };
