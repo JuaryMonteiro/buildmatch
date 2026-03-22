@@ -32,11 +32,11 @@ const CATEGORIES = [
 const BASE = import.meta.env.BASE_URL;
 
 const CATEGORIES = [
-  { name: "Pedreiro", img: `${BASE}categories/pedreiro.jpg` },
-  { name: "Eletricista", img: `${BASE}categories/eletricista.jpg` },
-  { name: "Canalizador", img: `${BASE}categories/canalizador.jpg` },
+  { name: "Pedreiro", img: `${BASE}categories/pedreiro.webp` },
+  { name: "Eletricista", img: `${BASE}categories/eletricista.webp` },
+  { name: "Canalizador", img: `${BASE}categories/canalizador.webp` },
   { name: "Pintor", img: `${BASE}categories/pintor.webp` },
-  { name: "Carpinteiro", img: `${BASE}categories/carpinteiro.jpg` },
+  { name: "Carpinteiro", img: `${BASE}categories/carpinteiro.webp` },
   { name: "Engenheiro", img: `${BASE}categories/engenheiro.webp` },
 ];
 // ============================================================
