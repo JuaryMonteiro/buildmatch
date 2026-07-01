@@ -53,7 +53,11 @@ const C = {
 
 const BASE = import.meta.env.BASE_URL;
 
-// Helpers para lidar com imageUrls (armazenado como JSON string)
+// ── Helpers para lidar com imageUrls (armazenado como JSON string) ──
+// O campo imageUrls no banco é uma STRING simples. Para guardar várias
+// imagens (base64 ou URLs) usamos JSON.stringify/JSON.parse em vez de
+// juntar com vírgula, porque uma Data URL base64 já contém vírgulas
+// (ex: "data:image/jpeg;base64,/9j/4AAQ...") e isso quebrava o split(",").
 const parseImages = (imageUrls) => {
   if (!imageUrls) return [];
   if (Array.isArray(imageUrls)) return imageUrls.filter(Boolean);
@@ -61,7 +65,7 @@ const parseImages = (imageUrls) => {
     const parsed = JSON.parse(imageUrls);
     return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
   } catch {
-    // fallback para dados antigos que usavam vírgula (só funciona se não houver base64)
+    // fallback para dados antigos salvos com vírgula (só funciona se não houver base64)
     return typeof imageUrls === "string" ? imageUrls.split(",").filter(Boolean) : [];
   }
 };
@@ -461,7 +465,7 @@ const PinterestGallery = ({ onProfSelect, onMessage }) => {
   };
 
   const PinCard = ({ item }) => {
-    const imgs    = item.imageUrls ? item.imageUrls.split(",").filter(Boolean) : [];
+    const imgs    = parseImages(item.imageUrls);
     const catStyle = CATEGORY_COLORS[item.category] || { bg: `${C.primary}15`, color: C.primary };
     return (
       <div onClick={() => openItem(item)}
@@ -622,7 +626,7 @@ const PinterestGallery = ({ onProfSelect, onMessage }) => {
                   </p>
                   <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none" }}>
                     {related.map((item, i) => {
-                      const imgs = item.imageUrls?.split(",").filter(Boolean) || [];
+                      const imgs = parseImages(item.imageUrls);
                       return (
                         <div key={i} onClick={() => openItem(item)}
                           style={{ flexShrink: 0, width: 100, borderRadius: 12,
@@ -1907,8 +1911,7 @@ const ProfPortfolio = ({ user }) => {
 
             {/* Galeria de fotos no topo */}
             {(() => {
-              const imgs = selected.imageUrls
-                ? selected.imageUrls.split(",").filter(Boolean) : [];
+              const imgs = parseImages(selected.imageUrls);
               return imgs.length > 0 ? (
                 <div style={{ position: "relative" }}>
                   <img src={imgs[0]} alt={selected.title}
@@ -1960,7 +1963,7 @@ const ProfPortfolio = ({ user }) => {
                 borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`,
                 marginBottom: 16 }}>
                 {[
-                 [faImages, `${parseImages(selected.imageUrls).length} fotos`],
+                  [faImages,   `${parseImages(selected.imageUrls).length} fotos`],
                   [faCalendarAlt, selected.createdAt ? new Date(selected.createdAt).toLocaleDateString("pt") : "—"],
                   [faBuilding, selected.category || "Geral"],
                 ].map(([ico, val], i) => (
@@ -2677,15 +2680,22 @@ const ProfessionalProfile = ({ prof, onBack, onMessage, onSchedule }) => {
             {tab === "portfolio" && (
               (data.portfolio || []).length === 0
                 ? <p style={{ textAlign: "center", color: C.gray, padding: 32 }}>Sem portfólio.</p>
-                : (data.portfolio || []).map((item, i) => (
+                : (data.portfolio || []).map((item, i) => {
+                  const imgs = parseImages(item.imageUrls);
+                  return (
                   <Card key={i} style={{ marginBottom: 12 }}>
-                    <div style={{ height: 120, background: `linear-gradient(135deg,${C.primary}20,${C.accent}20)`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
-                      <Icon icon={faBuilding} size={40} color={`${C.primary}60`} />
-                    </div>
+                    {imgs[0]
+                      ? <img src={imgs[0]} alt={item.title}
+                          style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 10, marginBottom: 10, display: "block" }} />
+                      : <div style={{ height: 120, background: `linear-gradient(135deg,${C.primary}20,${C.accent}20)`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
+                          <Icon icon={faBuilding} size={40} color={`${C.primary}60`} />
+                        </div>
+                    }
                     <div style={{ fontWeight: 600, color: C.dark }}>{item.title}</div>
                     {item.description && <div style={{ color: C.gray, fontSize: 13, marginTop: 4 }}>{item.description}</div>}
                   </Card>
-                ))
+                  );
+                })
             )}
             {tab === "reviews" && (
               (data.reviews || []).length === 0
