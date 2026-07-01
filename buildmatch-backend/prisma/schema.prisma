@@ -140,7 +140,7 @@ model Portfolio {
   professionalId String
   title          String
   description    String?
-  imageUrls      String  @default("")
+  imageUrls      Json     @default("[]")
   videoUrl       String?
   category       String?
   featured       Boolean  @default(false)

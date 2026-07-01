@@ -66,3 +66,7 @@ server.listen(PORT, () => {
   console.log(`🚀 BuildMatch API a correr em http://localhost:${PORT}`);
   console.log(`📊 Prisma Studio: npx prisma studio`);
 });
+
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", message: "BuildMatch backend ativo!" });
+});

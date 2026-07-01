@@ -53,6 +53,20 @@ const C = {
 
 const BASE = import.meta.env.BASE_URL;
 
+// Helpers para lidar com imageUrls (armazenado como JSON string)
+const parseImages = (imageUrls) => {
+  if (!imageUrls) return [];
+  if (Array.isArray(imageUrls)) return imageUrls.filter(Boolean);
+  try {
+    const parsed = JSON.parse(imageUrls);
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch {
+    // fallback para dados antigos que usavam vírgula (só funciona se não houver base64)
+    return typeof imageUrls === "string" ? imageUrls.split(",").filter(Boolean) : [];
+  }
+};
+const stringifyImages = (arr) => JSON.stringify(arr || []);
+
 const CATEGORIES = [
   { name: "Pedreiro", img: `${BASE}categories/pedreiro.webp` },
   { name: "Eletricista", img: `${BASE}categories/eletricista.webp` },
@@ -512,7 +526,7 @@ const PinterestGallery = ({ onProfSelect, onMessage }) => {
 
             {/* Fotos */}
             {(() => {
-              const imgs = selected.imageUrls?.split(",").filter(Boolean) || [];
+              const imgs = parseImages(selected.imageUrls);
               return imgs.length > 0 ? (
                 <div>
                   <img src={imgs[0]} alt={selected.title}
@@ -1708,10 +1722,10 @@ const ProfPortfolio = ({ user }) => {
       // Editar existente
       const updated = await portfolioAPI.update(editItem.id, {
         title, description: desc, category: cat,
-        imageUrls: photos.join(",")
+        imageUrls: stringifyImages(photos)
       });
       setItems(prev => prev.map(i => i.id === editItem.id
-        ? { ...i, title, description: desc, category: cat, imageUrls: photos.join(",") }
+        ? { ...i, title, description: desc, category: cat, imageUrls: stringifyImages(photos) }
         : i
       ));
       setEditItem(null);
@@ -1720,9 +1734,9 @@ const ProfPortfolio = ({ user }) => {
       const item = await portfolioAPI.create({
         professionalId: user.professional.id,
         title, description: desc, category: cat,
-        imageUrls: photos.join(",")
+        imageUrls: stringifyImages(photos)
       });
-      setItems(prev => [{ ...item, imageUrls: photos.join(",") }, ...prev]);
+      setItems(prev => [{ ...item, imageUrls: stringifyImages(photos) }, ...prev]);
     }
     setTitle(""); setDesc(""); setCat(""); setPhotos([]); setShowForm(false);
   } catch (err) { alert(err.message); } finally { setSaving(false); }
@@ -1739,7 +1753,7 @@ const ProfPortfolio = ({ user }) => {
   };
 
   const PinCard = ({ item }) => {
-    const imgs = item.imageUrls ? item.imageUrls.split(",").filter(Boolean) : [];
+    const imgs = parseImages(item.imageUrls);
     const catStyle = CATEGORY_COLORS[item.category] || { bg: `${C.primary}15`, color: C.primary };
     return (
       <div onClick={() => setSelected(item)}
@@ -1946,7 +1960,7 @@ const ProfPortfolio = ({ user }) => {
                 borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`,
                 marginBottom: 16 }}>
                 {[
-                  [faImages,   `${selected.imageUrls?.split(",").filter(Boolean).length || 0} fotos`],
+                 [faImages, `${parseImages(selected.imageUrls).length} fotos`],
                   [faCalendarAlt, selected.createdAt ? new Date(selected.createdAt).toLocaleDateString("pt") : "—"],
                   [faBuilding, selected.category || "Geral"],
                 ].map(([ico, val], i) => (
@@ -1972,7 +1986,7 @@ const ProfPortfolio = ({ user }) => {
                   setTitle(selected.title);
                   setDesc(selected.description || "");
                   setCat(selected.category || "");
-                  setPhotos(selected.imageUrls ? selected.imageUrls.split(",").filter(Boolean) : []);
+                  setPhotos(parseImages(selected.imageUrls));
                   setSelected(null);
                   setShowForm(true);
                 }}
