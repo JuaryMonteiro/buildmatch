@@ -14,7 +14,7 @@
 
 ---
 
-*Hugo Felipe Pereira Monteiro — Universidade de Santiago — DCSAT — 2026*
+*Hugo Felipe Pereira Monteiro — DCSAT — 2026*
 
 </div>
 
@@ -539,8 +539,11 @@ const io     = new Server(server, {
 
 // ── Middlewares ────────────────────────────────────
 app.use(cors({ origin: process.env.FRONTEND_URL }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({
+  extended: true,
+  limit: '50mb'
+}));
 
 // ── Health check ───────────────────────────────────
 app.get('/api/health', (req, res) => {
@@ -1347,7 +1350,7 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
 <div align="center">
 
-**BuildMatch** © 2026 — Hugo Monteiro — Universidade de Santiago
+**BuildMatch** © 2026 — Hugo Monteiro
 
 *Sistema de Intermediação para Serviços de Construção Civil em Cabo Verde*
 

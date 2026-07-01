@@ -58,6 +58,7 @@ router.post('/', authMiddleware, async (req, res) => {
         amount: amount ? parseFloat(amount) : null,
         startDate: startDate ? new Date(startDate) : null,
         address,
+        imageUrls,
       },
       include: {
         client:       { select: { id: true, name: true } },

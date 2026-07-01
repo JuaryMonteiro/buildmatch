@@ -118,11 +118,19 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const {
       specialty, experience, location, radius,
       priceMin, priceMax, about, tags, available,
+      address, city, island, postalCode,
     } = req.body;
 
     const professional = await prisma.professional.update({
       where: { id: req.params.id },
-      data: { specialty, experience, location, radius, priceMin, priceMax, about, tags, available },
+      data: {
+        specialty, experience, location, radius,
+        priceMin:   priceMin   ? parseFloat(priceMin)   : null,
+        priceMax:   priceMax   ? parseFloat(priceMax)   : null,
+        experience: experience ? parseInt(experience)   : 0,
+        about, tags, available,
+        address, city, island, postalCode,
+      },
     });
 
     res.json(professional);
@@ -130,6 +138,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Erro ao actualizar profissional' });
   }
 });
+
 
 // GET /api/professionals/:id/availability
 router.get('/:id/availability', async (req, res) => {

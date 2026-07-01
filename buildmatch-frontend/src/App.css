@@ -150,6 +150,15 @@
       justify-content: center;
       box-sizing: border-box;
     }
+
+    .bottom-nav {
+    display: flex;
+    max-width: 960px;
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+  }
   }
 }
 

@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assembleia Municipal — Institucional</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0d1e35;
+    --navy2: #162d4a;
+    --blue: #1a4a7a;
+    --blue-light: #2563a8;
+    --gold: #b8963e;
+    --gold-light: #d4af5a;
+    --gold-pale: #f5ead0;
+    --cream: #faf7f2;
+    --white: #ffffff;
+    --gray: #f0eee9;
+    --text: #1a1a2e;
+    --muted: #6b7a8d;
+    --border: #e2ddd5;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    line-height: 1.7;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--navy);
+    position: relative;
+    overflow: hidden;
+    padding: 80px 40px 70px;
+    text-align: center;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -80px; left: -80px;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: rgba(26,74,122,0.25);
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; right: -60px;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: rgba(184,150,62,0.1);
+  }
+
+  .hero-inner { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; }
+
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--gold-light);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 22px;
+  }
+
+  .hero-eyebrow::before,
+  .hero-eyebrow::after {
+    content: '';
+    display: block;
+    width: 30px;
+    height: 1px;
+    background: var(--gold);
+  }
+
+  .hero h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2.4rem, 5vw, 4rem);
+    font-weight: 600;
+    color: var(--white);
+    line-height: 1.15;
+    margin-bottom: 20px;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--gold-light);
+  }
+
+  .hero-desc {
+    color: rgba(255,255,255,0.65);
+    font-size: 1rem;
+    max-width: 580px;
+    margin: 0 auto;
+    font-weight: 300;
+  }
+
+  .hero-line {
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 28px auto 0;
+  }
+
+  /* ── QUEM SOMOS ── */
+  .quem-somos {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 70px 40px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: center;
+  }
+
+  .qs-text .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--blue-light);
+    margin-bottom: 14px;
+    display: block;
+  }
+
+  .qs-text h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.3rem;
+    font-weight: 600;
+    color: var(--navy);
+    line-height: 1.2;
+    margin-bottom: 20px;
+  }
+
+  .qs-text p {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 14px;
+  }
+
+  .qs-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .qs-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--blue);
+    border-radius: 0 10px 10px 0;
+    padding: 22px 24px;
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+
+  .qs-card:hover {
+    box-shadow: 0 8px 24px rgba(13,30,53,0.08);
+    transform: translateX(4px);
+  }
+
+  .qs-card h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 8px;
+  }
+
+  .qs-card p {
+    font-size: 0.87rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* ── COMPETÊNCIAS ── */
+  .competencias {
+    background: var(--navy);
+    padding: 70px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .competencias::before {
+    content: 'COMPETÊNCIAS';
+    position: absolute;
+    top: 30px; right: -20px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 7rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.03);
+    letter-spacing: 6px;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  .comp-inner { max-width: 1080px; margin: 0 auto; }
+
+  .comp-header {
+    text-align: center;
+    margin-bottom: 50px;
+  }
+
+  .comp-header .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--gold-light);
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  .comp-header h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.2rem;
+    font-weight: 600;
+    color: var(--white);
+  }
+
+  .comp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  .comp-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-top: 3px solid var(--gold);
+    border-radius: 0 0 10px 10px;
+    padding: 28px 26px;
+    transition: background 0.2s, transform 0.2s;
+    animation: fadeUp 0.5s ease forwards;
+    opacity: 0;
+  }
+
+  .comp-card:hover {
+    background: rgba(255,255,255,0.07);
+    transform: translateY(-4px);
+  }
+
+  .comp-icon {
+    width: 44px;
+    height: 44px;
+    background: rgba(184,150,62,0.15);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    margin-bottom: 16px;
+  }
+
+  .comp-card h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 10px;
+    letter-spacing: 0.3px;
+  }
+
+  .comp-card p {
+    font-size: 0.84rem;
+    color: rgba(255,255,255,0.55);
+    line-height: 1.65;
+  }
+
+  .comp-card .artigo {
+    margin-top: 14px;
+    font-size: 0.75rem;
+    color: var(--gold);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── PRESIDENTES ── */
+  .presidentes {
+    padding: 70px 40px;
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+
+  .pres-header {
+    text-align: center;
+    margin-bottom: 50px;
+  }
+
+  .pres-header .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--blue-light);
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  .pres-header h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.2rem;
+    font-weight: 600;
+    color: var(--navy);
+  }
+
+  .timeline {
+    position: relative;
+    padding-left: 40px;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 16px; top: 0; bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--blue), var(--gold));
+    border-radius: 2px;
+  }
+
+  .timeline-item {
+    position: relative;
+    margin-bottom: 36px;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    transition: box-shadow 0.2s;
+  }
+
+  .timeline-item:hover {
+    box-shadow: 0 8px 28px rgba(13,30,53,0.09);
+  }
+
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -31px;
+    top: 28px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--white);
+    border: 3px solid var(--blue);
+    box-shadow: 0 0 0 3px rgba(26,74,122,0.15);
+  }
+
+  .timeline-item.current::before {
+    background: var(--gold);
+    border-color: var(--gold);
+    box-shadow: 0 0 0 4px rgba(184,150,62,0.2);
+  }
+
+  .timeline-date {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--blue-light);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .timeline-item.current .timeline-date {
+    color: var(--gold);
+  }
+
+  .timeline-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 4px;
+  }
+
+  .timeline-partido {
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  .badge-atual {
+    display: inline-block;
+    background: var(--gold-pale);
+    color: var(--gold);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-left: 10px;
+    border: 1px solid var(--gold-light);
+  }
+
+  /* ── FOOTER STRIP ── */
+  .footer-strip {
+    background: var(--navy2);
+    padding: 30px 40px;
+    text-align: center;
+    color: rgba(255,255,255,0.4);
+    font-size: 0.8rem;
+  }
+
+  .footer-strip a {
+    color: var(--gold-light);
+    text-decoration: none;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .comp-card:nth-child(1) { animation-delay: 0.05s; }
+  .comp-card:nth-child(2) { animation-delay: 0.12s; }
+  .comp-card:nth-child(3) { animation-delay: 0.19s; }
+  .comp-card:nth-child(4) { animation-delay: 0.26s; }
+  .comp-card:nth-child(5) { animation-delay: 0.33s; }
+  .comp-card:nth-child(6) { animation-delay: 0.40s; }
+  .comp-card:nth-child(7) { animation-delay: 0.47s; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    .quem-somos {
+      grid-template-columns: 1fr;
+      padding: 50px 24px;
+      gap: 36px;
+    }
+    .hero { padding: 60px 24px 50px; }
+    .competencias { padding: 50px 24px; }
+    .presidentes { padding: 50px 24px; }
+    .comp-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">Assembleia Municipal</div>
+    <h1>Ribeira Brava<br><em>Institucional</em></h1>
+    <p class="hero-desc">Órgão representativo do Município, com poderes deliberativos e de fiscalização, promotor dos interesses e bem-estar da população.</p>
+    <div class="hero-line"></div>
+  </div>
+</section>
+
+<!-- QUEM SOMOS -->
+<section class="quem-somos">
+  <div class="qs-text">
+    <span class="section-label">Quem Somos</span>
+    <h2>Um Parlamento Local ao Serviço dos Munícipes</h2>
+    <p>A Assembleia Municipal é o órgão representativo do Município, provido de poderes deliberativos que tem como objetivo a promoção e a garantia dos interesses da população.</p>
+    <p>Possui poderes de fiscalização sobre o executivo municipal e delibera sobre assuntos de interesse para o Município, nos termos da lei.</p>
+    <p>Pela sua composição, atribuições e competências, funciona como um <strong>parlamento local</strong> e pretende ser um espaço de Cidadania.</p>
+  </div>
+  <div class="qs-cards">
+    <div class="qs-card">
+      <h3>Missão</h3>
+      <p>A Assembleia Municipal visa a defesa e a prossecução dos interesses próprios do Município, bem como a promoção do bem-estar da sua população.<br><small style="color:#b8963e">Artº 2 — Regimento Interno, BO nº 42, II Série</small></p>
+    </div>
+    <div class="qs-card" style="border-left-color: var(--gold);">
+      <h3>Direito de Representação</h3>
+      <p>A Assembleia Municipal tem como principal dever o de tomar posição perante os órgãos da administração central sobre os assuntos de interesse para o Município.<br><small style="color:#b8963e">Artº 3 — Regimento Interno</small></p>
+    </div>
+  </div>
+</section>
+
+<!-- COMPETÊNCIAS -->
+<section class="competencias">
+  <div class="comp-inner">
+    <div class="comp-header">
+      <span class="section-label">Atribuições</span>
+      <h2>Competências da Assembleia Municipal</h2>
+    </div>
+    <div class="comp-grid">
+
+      <div class="comp-card">
+        <div class="comp-icon">🏛️</div>
+        <h3>Organização Interna</h3>
+        <p>Eleição do Presidente, Vice-Presidente e Secretário da Mesa. Elaboração e aprovação do Regimento Interno e constituição de comissões de trabalho.</p>
+        <div class="artigo">Competência Orgânica</div>
+      </div>
+
+      <div class="comp-card">
+        <div class="comp-icon">🔍</div>
+        <h3>Fiscalização</h3>
+        <p>Acompanhamento e fiscalização das atividades da Câmara Municipal. Apreciação do relatório de atividades, balanço e contas do Município.</p>
+        <div class="artigo">Artº 24 — Regimento Interno</div>
+      </div>
+
+      <div class="comp-card">
+        <div class="comp-icon">📋</div>
+        <h3>Gestão</h3>
+        <p>Aprovação do plano municipal de desenvolvimento, plano de atividades, número de vereadores e operações de compra e venda de imóveis.</p>
+        <div class="artigo">Artº 25 — Regimento Interno</div>
+      </div>
+
+      <div class="comp-card">
+        <div class="comp-icon">💰</div>
+        <h3>Finanças</h3>
+        <p>Aprovação do orçamento municipal, taxas e impostos municipais, remunerações e subsídios de representação.</p>
+        <div class="artigo">Artº 26 e 27 — Regimento Interno</div>
+      </div>
+
+      <div class="comp-card">
+        <div class="comp-icon">🏢</div>
+        <h3>Empresas Públicas</h3>
+        <p>Criação, agrupamento, fusão, cisão e extinção de empresas públicas municipais.</p>
+        <div class="artigo">Artº 28 — Regimento Interno</div>
+      </div>
+
+      <div class="comp-card">
+        <div class="comp-icon">🚌</div>
+        <h3>Transportes Públicos</h3>
+        <p>Fixação do valor das tarifas e a cor dos automóveis do serviço de táxis no município.</p>
+        <div class="artigo">Artº 29 — Regimento Interno</div>
+      </div>
+
+      <div class="comp-card">
+        <div class="comp-icon">🌿</div>
+        <h3>Meio Ambiente</h3>
+        <p>Responsabilidade pela proteção e conservação do meio ambiente no território municipal.</p>
+        <div class="artigo">Artº 30 — Regimento Interno</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- PRESIDENTES -->
+<section class="presidentes">
+  <div class="pres-header">
+    <span class="section-label">História</span>
+    <h2>Presidentes da Assembleia Municipal</h2>
+  </div>
+
+  <div class="timeline">
+
+    <div class="timeline-item">
+      <div class="timeline-date">Jun. 2000 — Jun. 2004</div>
+      <div class="timeline-name">Primeiro Presidente</div>
+      <div class="timeline-partido">Partido CV</div>
+    </div>
+
+    <div class="timeline-item current">
+      <div class="timeline-date">Dez. 2024 — Dez. 2028 <span class="badge-atual">Atual</span></div>
+      <div class="timeline-name">Porfírio</div>
+      <div class="timeline-partido">PAICV — Partido Africano da Independência de Cabo Verde</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- FOOTER -->
+<div class="footer-strip">
+  Assembleia Municipal da Ribeira Brava — S. Nicolau &nbsp;|&nbsp;
+  <a href="https://cmrb.cv">cmrb.cv</a> &nbsp;|&nbsp;
+  Regimento Interno, BO nº 42, II Série, 2 de Novembro de 2006
+</div>
+
+</body>
+</html>

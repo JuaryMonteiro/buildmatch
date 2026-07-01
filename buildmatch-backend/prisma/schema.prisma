@@ -51,6 +51,10 @@ model Professional {
   location     String
   latitude     Float?
   longitude    Float?
+  address     String?
+  city        String?
+  island      String?
+  postalCode  String?
   radius       Float                    // raio de atendimento em km
   rating       Float    @default(0)
   reviewCount  Int      @default(0)
