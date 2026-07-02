@@ -1,8 +1,6 @@
 // prisma/seed.js
-const { PrismaClient } = require('../generated/prisma');
 const bcrypt = require('bcrypt');
-
-const prisma = new PrismaClient();
+const prisma = require('../src/lib/prisma');
 
 async function main() {
   console.log('A popular a base de dados com dados de exemplo...');
@@ -151,17 +149,82 @@ async function main() {
       },
     });
 
-    // Criar portfolio
-    await prisma.portfolio.create({
-      data: {
-        professionalId: prof1User.professional.id,
+    // Criar 10 publicações de portfólio
+    const portfolioItems = [
+      {
         title: 'Moradia T3 em Assomada',
         description: 'Construção completa de moradia T3 com garagem',
-        imageUrls: '',
         category: 'Residencial',
         featured: true,
       },
-    });
+      {
+        title: 'Muro de Vedação em Bloco',
+        description: 'Muro de vedação de 30 metros em bloco de cimento com acabamento rebocado',
+        category: 'Residencial',
+        featured: false,
+      },
+      {
+        title: 'Fundações de Edifício Comercial',
+        description: 'Execução de fundações e estrutura para edifício comercial de 3 pisos',
+        category: 'Comercial',
+        featured: true,
+      },
+      {
+        title: 'Ampliação de Cozinha',
+        description: 'Ampliação e remodelação de cozinha com nova estrutura em bloco',
+        category: 'Residencial',
+        featured: false,
+      },
+      {
+        title: 'Restauro de Fachada Antiga',
+        description: 'Restauro completo de fachada em casa histórica no centro de Assomada',
+        category: 'Restauro',
+        featured: true,
+      },
+      {
+        title: 'Construção de Garagem',
+        description: 'Construção de garagem para dois carros com portão automático',
+        category: 'Residencial',
+        featured: false,
+      },
+      {
+        title: 'Reforço Estrutural de Terraço',
+        description: 'Reforço de laje e impermeabilização de terraço',
+        category: 'Residencial',
+        featured: false,
+      },
+      {
+        title: 'Construção de Escadaria Exterior',
+        description: 'Escadaria em betão armado com acabamento em pedra',
+        category: 'Residencial',
+        featured: false,
+      },
+      {
+        title: 'Obra de Ampliação Comercial',
+        description: 'Ampliação de armazém comercial com nova estrutura em bloco e cobertura',
+        category: 'Comercial',
+        featured: true,
+      },
+      {
+        title: 'Construção de Piscina',
+        description: 'Construção de piscina residencial com estrutura em betão armado',
+        category: 'Residencial',
+        featured: false,
+      },
+    ];
+
+    for (const item of portfolioItems) {
+      await prisma.portfolio.create({
+        data: {
+          professionalId: prof1User.professional.id,
+          title: item.title,
+          description: item.description,
+          imageUrls: '',
+          category: item.category,
+          featured: item.featured,
+        },
+      });
+    }
   }
 
   console.log('✅ Base de dados populada com sucesso!');

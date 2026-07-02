@@ -1,12 +1,10 @@
-// src/routes/auth.js
 const express = require('express');
 const bcrypt  = require('bcrypt');
 const jwt     = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
-const authMiddleware   = require('../middleware/auth');
+const authMiddleware = require('../middleware/auth');
+const prisma = require('../lib/prisma');
 
 const router = express.Router();
-const prisma = new PrismaClient();
 const SALT_ROUNDS = 12;
 
 // POST /api/auth/register

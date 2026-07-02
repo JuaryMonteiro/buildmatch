@@ -1,10 +1,11 @@
 // src/routes/professionals.js
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+
+
 const authMiddleware   = require('../middleware/auth');
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 // GET /api/professionals — Listar com filtros
 router.get('/', async (req, res) => {
