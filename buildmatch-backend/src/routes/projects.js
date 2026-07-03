@@ -59,13 +59,27 @@ router.post('/', authMiddleware, async (req, res) => {
         amount: amount ? parseFloat(amount) : null,
         startDate: startDate ? new Date(startDate) : null,
         address,
-        imageUrls,
       },
       include: {
         client:       { select: { id: true, name: true } },
         professional: { include: { user: { select: { id: true, name: true } } } },
       },
     });
+
+    // ── Notificar o profissional sobre o novo projecto ──
+    try {
+      await prisma.notificacao.create({
+        data: {
+          titulo: 'Novo Projecto',
+          mensagem: `O cliente ${project.client.name} criou o projecto "${project.title}".`,
+          type: 'PROJETO',
+          status: 'NAO_LIDA',
+          userId: project.professional.user.id,
+        },
+      });
+    } catch (notifErr) {
+      console.error('Erro ao criar notificação de projecto:', notifErr);
+    }
 
     res.status(201).json(project);
   } catch (err) {
@@ -111,7 +125,41 @@ router.put('/:id', authMiddleware, async (req, res) => {
         startDate: startDate ? new Date(startDate)   : undefined,
         endDate:   endDate   ? new Date(endDate)     : undefined,
       },
+      include: {
+        client:       { select: { id: true, name: true } },
+        professional: { include: { user: { select: { id: true, name: true } } } },
+      },
     });
+
+    // ── Notificar sobre mudança de status ──
+    if (status) {
+      const statusLabels = {
+        PENDING: 'Pendente',
+        ACTIVE: 'Ativo',
+        COMPLETED: 'Concluído',
+        CANCELLED: 'Cancelado',
+      };
+      const label = statusLabels[status] || status;
+
+      // Notificar a outra parte (se quem atualizou for o cliente, notifica o profissional e vice-versa)
+      const targetUserId = req.user.id === project.clientId
+        ? project.professional.user.id
+        : project.clientId;
+
+      try {
+        await prisma.notificacao.create({
+          data: {
+            titulo: 'Atualização de Projecto',
+            mensagem: `O projecto "${project.title}" foi atualizado para: ${label}.`,
+            type: 'PROJETO',
+            status: 'NAO_LIDA',
+            userId: targetUserId,
+          },
+        });
+      } catch (notifErr) {
+        console.error('Erro ao criar notificação de status:', notifErr);
+      }
+    }
 
     res.json(project);
   } catch (err) {

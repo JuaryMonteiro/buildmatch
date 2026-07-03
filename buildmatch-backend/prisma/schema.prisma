@@ -6,7 +6,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
 // ── Enums ──────────────────────────────────────────
 
 enum UserType {
@@ -24,52 +23,53 @@ enum ProjectStatus {
 // ── Modelos ────────────────────────────────────────
 
 model User {
-  id          String    @id @default(uuid())
-  name        String
-  email       String    @unique
-  password    String
-  type        UserType
-  avatar      String?
-  phone       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String    @id @default(uuid())
+  name      String
+  email     String    @unique
+  password  String
+  type      UserType
+  avatar    String?
+  phone     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   addresses Address[]
 
-  professional    Professional?
-  projectsClient  Project[]     @relation("ClientProjects")
-  reviewsGiven    Review[]      @relation("ReviewsGiven")
-  messagesSent    Message[]     @relation("MessagesSent")
+  professional   Professional?
+  projectsClient Project[]     @relation("ClientProjects")
+  reviewsGiven   Review[]      @relation("ReviewsGiven")
+  messagesSent   Message[]     @relation("MessagesSent")
+  notificacoes   Notificacao[]
 }
 
 model Professional {
-  id           String   @id @default(uuid())
-  userId       String   @unique
-  specialty    String
-  experience   Int                      // anos de experiência
-  location     String
-  latitude     Float?
-  longitude    Float?
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  specialty   String
+  experience  Int // anos de experiência
+  location    String
+  latitude    Float?
+  longitude   Float?
   address     String?
   city        String?
   island      String?
   postalCode  String?
-  radius       Float                    // raio de atendimento em km
-  rating       Float    @default(0)
-  reviewCount  Int      @default(0)
-  verified     Boolean  @default(false)
-  available    Boolean  @default(true)
-  priceMin     Float?
-  priceMax     Float?
-  about        String?
-  tags         String  @default("")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  radius      Float // raio de atendimento em km
+  rating      Float    @default(0)
+  reviewCount Int      @default(0)
+  verified    Boolean  @default(false)
+  available   Boolean  @default(true)
+  priceMin    Float?
+  priceMax    Float?
+  about       String?
+  tags        String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  user       User        @relation(fields: [userId], references: [id])
-  portfolio  Portfolio[]
-  projects   Project[]
-  reviews    Review[]
-  schedules  Schedule[]
+  user      User        @relation(fields: [userId], references: [id])
+  portfolio Portfolio[]
+  projects  Project[]
+  reviews   Review[]
+  schedules Schedule[]
 }
 
 model Project {
@@ -94,9 +94,9 @@ model Project {
 
 model Review {
   id             String   @id @default(uuid())
-  rating         Int                        // 1 a 5
+  rating         Int // 1 a 5
   comment        String
-  reply          String?                    // resposta do profissional
+  reply          String? // resposta do profissional
   authorId       String
   professionalId String
   projectId      String   @unique
@@ -113,7 +113,7 @@ model Message {
   senderId  String
   projectId String
   mediaUrl  String?
-  mediaType String?  // image | video | document
+  mediaType String? // image | video | document
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
@@ -146,6 +146,7 @@ model Portfolio {
 
   professional Professional @relation(fields: [professionalId], references: [id])
 }
+
 model Address {
   id        String   @id @default(uuid())
   userId    String
@@ -155,4 +156,17 @@ model Address {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
+}
+
+model Notificacao {
+  id       Int    @id @default(autoincrement())
+  titulo   String
+  mensagem String
+  type     String
+  status   String
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  data_criacao DateTime @default(now())
 }

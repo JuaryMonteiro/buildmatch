@@ -54,6 +54,27 @@ router.post('/', authMiddleware, async (req, res) => {
       data: { rating: Math.round(avgRating * 10) / 10, reviewCount: allReviews.length },
     });
 
+    // ── Notificar o profissional sobre a nova avaliação ──
+    try {
+      const professional = await prisma.professional.findUnique({
+        where: { id: professionalId },
+        select: { userId: true },
+      });
+      if (professional) {
+        await prisma.notificacao.create({
+          data: {
+            titulo: 'Nova Avaliação',
+            mensagem: `Recebeu uma avaliação de ${rating} estrela(s): "${comment}".`,
+            type: 'AVALIACAO',
+            status: 'NAO_LIDA',
+            userId: professional.userId,
+          },
+        });
+      }
+    } catch (notifErr) {
+      console.error('Erro ao criar notificação de avaliação:', notifErr);
+    }
+
     res.status(201).json(review);
   } catch (err) {
     if (err.code === 'P2002') {
@@ -67,11 +88,22 @@ router.post('/', authMiddleware, async (req, res) => {
 router.put('/:id/reply', authMiddleware, async (req, res) => {
   try {
     const { reply } = req.body;
-    const review = await prisma.review.update({
+
+    // Verificar se a avaliação existe e se o profissional avaliado pertence ao utilizador logado
+    const review = await prisma.review.findUnique({
+      where: { id: req.params.id },
+      include: { professional: true },
+    });
+    if (!review) return res.status(404).json({ error: 'Avaliação não encontrada' });
+    if (review.professional.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Sem permissão para responder a esta avaliação' });
+    }
+
+    const updatedReview = await prisma.review.update({
       where: { id: req.params.id },
       data: { reply },
     });
-    res.json(review);
+    res.json(updatedReview);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao responder à avaliação' });
   }

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
+import { io } from "socket.io-client";
 import { authAPI, professionalsAPI, projectsAPI, messagesAPI, schedulesAPI } from "./services/api";
 import logo from "./assets/logo.png";
+import AppHeader from "./components/AppHeader";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHome, faSearch, faClipboardList, faComments, faUser,
@@ -38,26 +40,22 @@ const categoryIconMap = {
 // PALETA OFICIAL BuildMatch
 // ============================================================
 const C = {
-  primary: "#1F4E8C",
-  primaryDark: "#163a6b",
-  accent: "#F57C00",
-  dark: "#2E2E2E",
-  gray: "#6B7280",
-  lightGray: "#F5F5F5",
-  white: "#FFFFFF",
-  success: "#22C55E",
-  error: "#EF4444",
-  border: "#E5E7EB",
-  purple: "#7C3AED",
+  primary: "var(--color-primary)",
+  primaryDark: "var(--color-primary-dark)",
+  accent: "var(--color-accent)",
+  dark: "var(--color-dark)",
+  gray: "var(--color-gray)",
+  lightGray: "var(--color-light-gray)",
+  white: "var(--color-white)",
+  success: "var(--color-success)",
+  error: "var(--color-error)",
+  border: "var(--color-border)",
+  purple: "var(--color-purple)",
 };
 
 const BASE = import.meta.env.BASE_URL;
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || "http://localhost:3001";
 
-// ── Helpers para lidar com imageUrls (armazenado como JSON string) ──
-// O campo imageUrls no banco é uma STRING simples. Para guardar várias
-// imagens (base64 ou URLs) usamos JSON.stringify/JSON.parse em vez de
-// juntar com vírgula, porque uma Data URL base64 já contém vírgulas
-// (ex: "data:image/jpeg;base64,/9j/4AAQ...") e isso quebrava o split(",").
 const parseImages = (imageUrls) => {
   if (!imageUrls) return [];
   if (Array.isArray(imageUrls)) return imageUrls.filter(Boolean);
@@ -65,7 +63,6 @@ const parseImages = (imageUrls) => {
     const parsed = JSON.parse(imageUrls);
     return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
   } catch {
-    // fallback para dados antigos salvos com vírgula (só funciona se não houver base64)
     return typeof imageUrls === "string" ? imageUrls.split(",").filter(Boolean) : [];
   }
 };
@@ -480,14 +477,14 @@ const PinterestGallery = ({ onProfSelect, onMessage }) => {
               style={{ width: "100%", display: "block", objectFit: "cover",
                 maxHeight: 200, minHeight: 90 }} />
           : <div style={{ height: 110 + (item.title?.length % 4) * 20,
-              background: `linear-gradient(135deg, ${C.primary}20, ${C.accent}20)`,
+             background: C.primary,
               display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Icon icon={faBuilding} size={32} color={`${C.primary}50`} />
             </div>
         }
         <div style={{ padding: "8px 10px 10px" }}>
           {item.category && (
-            <span style={{ background: catStyle.bg, color: catStyle.color,
+            <span style={{  background: C.primary,
               fontSize: 9, fontWeight: 700, padding: "2px 7px",
               borderRadius: 8, display: "inline-block", marginBottom: 4 }}>
               {item.category}
@@ -549,7 +546,7 @@ const PinterestGallery = ({ onProfSelect, onMessage }) => {
                 </div>
               ) : (
                 <div style={{ height: 160,
-                  background: `linear-gradient(135deg, ${C.primary}30, ${C.accent}30)`,
+                   background: C.primary,
                   display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Icon icon={faBuilding} size={56} color={`${C.primary}50`} />
                 </div>
@@ -637,7 +634,7 @@ const PinterestGallery = ({ onProfSelect, onMessage }) => {
                                 style={{ width: "100%", height: 80,
                                   objectFit: "cover", display: "block" }} />
                             : <div style={{ height: 80,
-                                background: `linear-gradient(135deg, ${C.primary}20, ${C.accent}20)`,
+                                background: C.primary,
                                 display: "flex", alignItems: "center", justifyContent: "center" }}>
                                 <Icon icon={faBuilding} size={24} color={`${C.primary}50`} />
                               </div>
@@ -711,13 +708,6 @@ const ClientHome = ({user, onProfSelect, onSearch, onOpenChat }) => {
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, padding: "28px 16px 50px", textAlign: "center" }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 12 }}>
-         
-        </div>
-    
-      </div>
-
       <div style={{ padding: "20px 16px" }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 14 }}>Categorias</h3>
         <div className="categories-grid">
@@ -1026,41 +1016,107 @@ const ClientProjects = () => {
 // ============================================================
 // MENSAGENS DO CLIENTE
 // ============================================================
-const ClientMessages = ({ onOpenChat }) => {
+const MessagesLayout = ({ user, initialConv, onConsumeInitial }) => {
   const [convs, setConvs] = useState([]);
   const [loading, setL] = useState(true);
+  const [selected, setSelected] = useState(null);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
-    messagesAPI.conversations().then(d => setConvs(d.data || [])).catch(() => setConvs([])).finally(() => setL(false));
+    messagesAPI.conversations().then(d => setConvs(dedupeConversations(d.data || []))).catch(() => setConvs([])).finally(() => setL(false));
   }, []);
 
+  // Se chegou aqui a partir de "Mensagem" no perfil de um profissional, abre já essa conversa
+  useEffect(() => {
+    if (!initialConv) return;
+    setConvs(prev => dedupeConversations([initialConv, ...prev]));
+    setSelected(initialConv);
+    onConsumeInitial?.();
+  }, [initialConv]);
+
+  const filtered = convs.filter(conv => {
+    const name = conv.professional?.user?.name || conv.client?.name || "";
+    return name.toLowerCase().includes(search.toLowerCase());
+  });
+
   return (
-    <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
-      <h2 style={{ fontSize: 22, fontWeight: 800, color: C.dark, marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
-        <Icon icon={faComments} size={20} color={C.primary} /> Mensagens
-      </h2>
-      {loading ? <Spinner /> : convs.length === 0
-        ? <div style={{ textAlign: "center", padding: 48, color: C.gray }}><Icon icon={faComments} size={48} color={C.border} /><p style={{ marginTop: 12 }}>Sem mensagens ainda</p></div>
-        : convs.map(conv => {
-          const last = conv.messages?.[0];
-          const name = conv.professional?.user?.name || "Profissional";
-          return (
-            <div key={conv.id} onClick={() => onOpenChat(conv)} style={{ background: C.white, borderRadius: 14, padding: "14px 16px", display: "flex", gap: 12, alignItems: "center", cursor: "pointer", marginBottom: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.05)", border: `1px solid ${C.border}` }}>
-              <Avatar name={name} size={50} />
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontWeight: 700, color: C.dark, fontSize: 14 }}>{name}</span>
-                  {last && <span style={{ fontSize: 12, color: C.gray }}>{new Date(last.createdAt).toLocaleDateString("pt")}</span>}
+    <div className="messages-layout">
+      <div className={`messages-list-pane${selected ? " has-selection" : ""}`}>
+        <div  className="messages-layout-top" style={{ padding: "20px 16px 12px",  }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: C.dark, marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
+            <Icon icon={faComments} size={20} color={C.primary} /> Mensagens
+          </h2>
+          <div style={{ position: "relative" }}>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Pesquisar conversas..."
+              style={{ width: "100%", padding: "10px 14px 10px 38px", border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }} />
+            <Icon icon={faSearch} size={13} color={C.gray} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />
+          </div>
+        </div>
+        <div style={{ padding: "0 16px 16px", overflowY: "auto" }}>
+          {loading ? <Spinner /> : filtered.length === 0
+            ? <div style={{ textAlign: "center", padding: 48, color: C.gray }}><Icon icon={faComments} size={48} color={C.border} /><p style={{ marginTop: 12 }}>Sem mensagens ainda</p></div>
+            : filtered.map(conv => {
+              const last = conv.messages?.[0];
+              const name = conv.professional?.user?.name || conv.client?.name || "Utilizador";
+              const isActive = selected?.id === conv.id;
+              return (
+                <div key={conv.id} onClick={() => setSelected(conv)} style={{ background: isActive ? `${C.primary}10` : C.white, borderRadius: 14, padding: "14px 16px", display: "flex", gap: 12, alignItems: "center", cursor: "pointer", marginBottom: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.05)", border: `1.5px solid ${isActive ? C.primary : C.border}` }}>
+                  <Avatar name={name} size={50} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontWeight: 700, color: C.dark, fontSize: 14 }}>{name}</span>
+                      {last && <span style={{ fontSize: 12, color: C.gray, flexShrink: 0, marginLeft: 8 }}>{new Date(last.createdAt).toLocaleDateString("pt")}</span>}
+                    </div>
+                    <div style={{ color: C.gray, fontSize: 13, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{last?.content || conv.title}</div>
+                  </div>
+                  <Icon icon={faChevronRight} size={12} color={C.gray} />
                 </div>
-                <div style={{ color: C.gray, fontSize: 13, marginTop: 3 }}>{last?.content || conv.title}</div>
-              </div>
-              <Icon icon={faChevronRight} size={12} color={C.gray} />
-            </div>
-          );
-        })
-      }
+              );
+            })
+          }
+        </div>
+      </div>
+
+      <div className={`messages-chat-pane${selected ? " active" : ""}`}>
+        {selected ? (
+          <ChatScreen conversation={selected} user={user} onBack={() => setSelected(null)} embedded />
+        ) : (
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: C.gray, fontFamily: "'DM Sans', sans-serif" }}>
+            <Icon icon={faComments} size={56} color={C.border} />
+            <p style={{ marginTop: 14, fontSize: 15, fontWeight: 600, color: C.dark }}>Selecione uma conversa</p>
+            <p style={{ fontSize: 13, marginTop: 4 }}>Escolha um contacto à esquerda para começar a conversar</p>
+          </div>
+        )}
+      </div>
+
+      <style>{`
+        .messages-layout { display: flex; height: calc(100vh - 96px); background: ${C.white}; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.07); font-family: 'DM Sans', sans-serif; }
+        .messages-list-pane { width: 360px; flex-shrink: 0; border-right: 1px solid ${C.border}; display: flex; flex-direction: column; overflow: hidden; }
+        .messages-chat-pane { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .messages-layout-top { padding: 20px 16px 12px
+        @media (max-width: 860px) {
+          .messages-layout { height: calc(100vh - 80px); border-radius: 0; box-shadow: none; }
+          .messages-list-pane { width: 100%; }
+          .messages-chat-pane { display: none; }
+          .messages-chat-pane.active { display: flex; position: fixed; inset: 0; z-index: 150; }
+          .messages-list-pane.has-selection { display: none; }
+        }
+      `}</style>
     </div>
   );
+};
+
+// Agrupa conversas pelo mesmo profissional, mantendo apenas a mais recente
+// (evita profissionais repetidos na lista quando existem vários "projectos"/conversas com a mesma pessoa)
+const dedupeConversations = (list) => {
+  const lastTime = (conv) => new Date(conv.messages?.[0]?.createdAt || conv.updatedAt || conv.createdAt || 0).getTime();
+  const byKey = new Map();
+  for (const conv of list) {
+    const key = conv.professional?.id || conv.professionalId || conv.client?.id || conv.id;
+    const existing = byKey.get(key);
+    if (!existing || lastTime(conv) > lastTime(existing)) byKey.set(key, conv);
+  }
+  return [...byKey.values()].sort((a, b) => lastTime(b) - lastTime(a));
 };
 
 // ============================================================
@@ -1070,7 +1126,7 @@ const ClientProfile = ({ user, onLogout, onUpdate }) => {
   const [section, setSection] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
-  const showSuccess = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(null), 3000); };
+  const showSuccess = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(null), 3001); };
 
   const BackBtn = ({ light }) => (
     <button onClick={() => setSection(null)} style={{ background: light ? "rgba(255,255,255,0.15)" : C.lightGray, border: "none", borderRadius: 10, padding: "8px 14px", cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif", color: light ? "#fff" : C.dark, display: "flex", alignItems: "center", gap: 6 }}>
@@ -1449,7 +1505,7 @@ const ClientProfile = ({ user, onLogout, onUpdate }) => {
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
       {successMsg && <SuccessModal message={successMsg} onClose={() => setSuccessMsg(null)} />}
-      <div style={{ background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, padding: "28px 16px 50px", textAlign: "center" }}>
+      <div style={{ background: C.primary, padding: "28px 16px 50px", textAlign: "center" }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 32 }}>
           <Avatar name={user?.name} color={C.accent} size={80} />
         </div>
@@ -1475,7 +1531,7 @@ const ClientProfile = ({ user, onLogout, onUpdate }) => {
                 onMouseEnter={e => e.currentTarget.style.background = C.lightGray}
                 onMouseLeave={e => e.currentTarget.style.background = "transparent"}
               >
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: C.lightGray, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: C.pr, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <Icon icon={item.icon} size={18} color={C.primary} />
                 </div>
                 <div style={{ flex: 1 }}>
@@ -1514,13 +1570,13 @@ const ProfDashboard = ({ user }) => {
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)", padding: "28px 20px 32px", borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
+      <div style={{  background: C.primary, padding: "28px 20px 32px", borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div>
             <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, marginBottom: 2 }}>Painel do Profissional</p>
             <h2 style={{ color: "#fff", fontSize: 20, fontWeight: 700, margin: 0 }}>{user?.name}</h2>
           </div>
-          <div style={{ background: C.accent, borderRadius: 12, padding: "6px 12px", display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{  background: C.primary, borderRadius: 12, padding: "6px 12px", display: "flex", alignItems: "center", gap: 6 }}>
             <Icon icon={faHammer} size={12} color="#fff" />
             <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>PRO</span>
           </div>
@@ -1773,7 +1829,7 @@ const ProfPortfolio = ({ user }) => {
               style={{ width: "100%", display: "block", objectFit: "cover",
                 maxHeight: 220, minHeight: 100 }} />
           : <div style={{ height: 120 + (item.title?.length % 3) * 30,
-              background: `linear-gradient(135deg, ${C.primary}20, ${C.accent}20)`,
+               background: C.primary,
               display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Icon icon={faBuilding} size={36} color={`${C.primary}60`} />
             </div>
@@ -1931,7 +1987,7 @@ const ProfPortfolio = ({ user }) => {
                 </div>
               ) : (
                 <div style={{ height: 160,
-                  background: `linear-gradient(135deg, ${C.primary}30, ${C.accent}30)`,
+                   background: C.primary,
                   display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Icon icon={faBuilding} size={56} color={`${C.primary}60`} />
                 </div>
@@ -2032,7 +2088,7 @@ const ProfProfile = ({ user, onLogout }) => {
   const [section, setSection] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
-  const showSuccess = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(null), 3000); };
+  const showSuccess = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(null), 3001); };
 
   const BackBtn = () => (
     <button onClick={() => setSection(null)} style={{ background: "#2a2a3e", border: "none", borderRadius: 10, padding: "8px 14px", cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif", color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
@@ -2427,7 +2483,7 @@ const ProfProfile = ({ user, onLogout }) => {
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
       {successMsg && <SuccessModal message={successMsg} onClose={() => setSuccessMsg(null)} />}
-      <div style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)", padding: "28px 16px 50px", textAlign: "center" }}>
+      <div style={{background: C.primary, padding: "28px 16px 50px", textAlign: "center" }}>
         <Avatar name={user?.name} color={C.accent} size={80} />
         <h2 style={{ color: "#fff", fontSize: 20, fontWeight: 800, marginTop: 12, marginBottom: 4 }}>{user?.name}</h2>
         <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, margin: 0 }}>{prof?.specialty || "Profissional"}</p>
@@ -2492,25 +2548,60 @@ const ProfProfile = ({ user, onLogout }) => {
 // ============================================================
 // CHAT
 // ============================================================
-const ChatScreen = ({ conversation, user, onBack }) => {
+const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [peerTyping, setPeerTyping] = useState(false);
   const endRef = useRef(null);
   const inputRef = useRef(null);
+  const socketRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
   const isPro = user?.type === "PROFESSIONAL";
 
+  // ── Histórico inicial via API REST ──────────────
   useEffect(() => {
     messagesAPI.history(conversation.id)
       .then(d => setMessages(d.data || [])).catch(() => setMessages([])).finally(() => setLoading(false));
   }, [conversation.id]);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  // ── Ligação Socket.IO — chat em tempo real ──────
+  useEffect(() => {
+    const socket = io(SOCKET_URL, { transports: ["websocket"] });
+    socketRef.current = socket;
+    socket.emit("join_room", conversation.id);
+
+    socket.on("receive_message", (data) => {
+      setMessages(prev => {
+        if (prev.some(m => m.id === data.id)) return prev; // evita duplicar mensagem própria
+        return [...prev, data];
+      });
+      setPeerTyping(false);
+    });
+
+    socket.on("user_typing", (data) => {
+      if (data.senderId === user?.id) return;
+      setPeerTyping(true);
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => setPeerTyping(false), 2000);
+    });
+
+    return () => {
+      clearTimeout(typingTimeoutRef.current);
+      socket.disconnect();
+    };
+  }, [conversation.id, user?.id]);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, peerTyping]);
 
   useEffect(() => {
     if (!loading) setTimeout(() => inputRef.current?.focus(), 100);
   }, [loading]);
+
+  const notifyTyping = () => {
+    socketRef.current?.emit("typing", { projectId: conversation.id, senderId: user?.id });
+  };
 
   const send = async () => {
     if (!text.trim() || sending) return;
@@ -2522,6 +2613,8 @@ const ChatScreen = ({ conversation, user, onBack }) => {
     try {
       const msg = await messagesAPI.send(conversation.id, { content });
       setMessages(prev => prev.map(m => m.id === temp.id ? msg : m));
+      // Transmite a mensagem já guardada aos restantes participantes da sala em tempo real
+      socketRef.current?.emit("send_message", { ...msg, projectId: conversation.id });
     } catch {
       setMessages(prev => prev.filter(m => m.id !== temp.id));
       setText(content);
@@ -2537,7 +2630,7 @@ const ChatScreen = ({ conversation, user, onBack }) => {
   const subtitle = conversation.title || conversation.professional?.specialty || "";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", fontFamily: "'DM Sans', sans-serif", background: C.lightGray }}>
+    <div style={{ display: "flex", flexDirection: "column", height: embedded ? "100%" : "100vh", fontFamily: "'DM Sans', sans-serif", background: C.lightGray }}>
       <div style={{ background: isPro ? "#1a1a2e" : C.primary, padding: "16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
         <button onClick={onBack} style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", width: 36, height: 36, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Icon icon={faArrowLeft} size={14} color="#fff" />
@@ -2586,6 +2679,17 @@ const ChatScreen = ({ conversation, user, onBack }) => {
                 </div>
               );
             })}
+            {peerTyping && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 28, flexShrink: 0 }}><Avatar name={name} size={28} /></div>
+                <div style={{ padding: "10px 14px", borderRadius: "18px 18px 18px 4px", background: C.white, boxShadow: "0 1px 4px rgba(0,0,0,0.08)", display: "flex", gap: 4 }}>
+                  {[0, 1, 2].map(i => (
+                    <span key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: C.gray, opacity: 0.6, animation: `typingDot 1s ${i * 0.15}s infinite ease-in-out` }} />
+                  ))}
+                  <style>{`@keyframes typingDot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-4px); opacity: 1; } }`}</style>
+                </div>
+              </div>
+            )}
             <div ref={endRef} />
           </>
         )}
@@ -2593,7 +2697,7 @@ const ChatScreen = ({ conversation, user, onBack }) => {
 
       <div style={{ background: C.white, padding: "12px 16px", borderTop: `1px solid ${C.border}`, flexShrink: 0, boxShadow: "0 -2px 10px rgba(0,0,0,0.06)" }}>
         <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
-          <textarea ref={inputRef} value={text} onChange={e => setText(e.target.value)} onKeyDown={handleKey}
+          <textarea ref={inputRef} value={text} onChange={e => { setText(e.target.value); notifyTyping(); }} onKeyDown={handleKey}
             placeholder="Escrever mensagem..." rows={1}
             style={{ flex: 1, border: `1.5px solid ${text ? C.primary : C.border}`, borderRadius: 24, padding: "10px 16px", outline: "none", fontSize: 14, fontFamily: "'DM Sans', sans-serif", resize: "none", boxSizing: "border-box", lineHeight: 1.5, maxHeight: 120, overflowY: "auto", transition: "border-color 0.2s", background: C.white }}
             onInput={e => { e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px"; }}
@@ -2624,7 +2728,7 @@ const ProfessionalProfile = ({ prof, onBack, onMessage, onSchedule }) => {
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`, padding: "20px 16px 60px", borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
+      <div style={{ background: C.primary, padding: "20px 16px 60px", borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
         <button onClick={onBack} style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", padding: "8px 14px", borderRadius: 10, cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif", marginBottom: 20, display: "flex", alignItems: "center", gap: 6 }}>
           <Icon icon={faArrowLeft} size={13} color="#fff" /> Voltar
         </button>
@@ -2687,7 +2791,7 @@ const ProfessionalProfile = ({ prof, onBack, onMessage, onSchedule }) => {
                     {imgs[0]
                       ? <img src={imgs[0]} alt={item.title}
                           style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 10, marginBottom: 10, display: "block" }} />
-                      : <div style={{ height: 120, background: `linear-gradient(135deg,${C.primary}20,${C.accent}20)`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
+                      : <div style={{ height: 120, background: C.primary, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
                           <Icon icon={faBuilding} size={40} color={`${C.primary}60`} />
                         </div>
                     }
@@ -2806,10 +2910,14 @@ export default function BuildMatchApp() {
 
   const login = (u) => { setUser(u); setScreen("app"); };
   const logout = () => { localStorage.clear(); setUser(null); setScreen("login"); };
-  const success = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(null), 3000); };
+  const success = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(null), 3001); };
   const isPro = user?.type === "PROFESSIONAL";
 
-  if (openChat) return <ChatScreen conversation={openChat} user={user} onBack={() => setOpenChat(null)} />;
+  // Abre uma conversa dentro do separador "Mensagens" (split-view), em vez de tomar o ecrã todo
+  const goToChat = (conv) => {
+    setOpenChat(conv);
+    if (isPro) setProfTab("messages"); else setClientTab("messages");
+  };
 
   if (screen === "onboarding") return <Onboarding onFinish={() => setScreen("login")} />;
   if (screen === "login") return <Login onLogin={login} />;
@@ -2829,11 +2937,11 @@ export default function BuildMatchApp() {
             try {
               const project = await projectsAPI.create({ title: `Contacto — ${selectedProf.specialty}`, professionalId: selectedProf.id, description: "Conversa iniciada pelo cliente" });
               setSelectedProf(null);
-              setOpenChat({ id: project.id, title: `Contacto — ${selectedProf.specialty}`, professional: selectedProf });
+              goToChat({ id: project.id, title: `Contacto — ${selectedProf.specialty}`, professional: selectedProf });
             } catch (err) {
               const data = await messagesAPI.conversations().catch(() => ({ data: [] }));
               const existing = (data.data || []).find(c => c.professional?.id === selectedProf.id || c.professionalId === selectedProf.id);
-              if (existing) { setSelectedProf(null); setOpenChat(existing); }
+              if (existing) { setSelectedProf(null); goToChat(existing); }
               else alert("Erro ao iniciar conversa: " + err.message);
             }
           }}
@@ -2849,10 +2957,10 @@ export default function BuildMatchApp() {
       switch (profTab) {
         case "dashboard": return <ProfDashboard user={user} />;
         case "projects": return <ProfProjects />;
-        case "messages": return <ClientMessages onOpenChat={setOpenChat} />;
+        case "messages": return <MessagesLayout user={user} initialConv={openChat} onConsumeInitial={() => setOpenChat(null)} />;
         case "agenda": return <ProfAgenda user={user} />;
         case "portfolio": return <ProfPortfolio user={user} />;
-        case "home": return <ClientHome user={user} onProfSelect={setSelectedProf} onOpenChat={setOpenChat} onSearch={q => { setSearchQ(q); setClientTab("search"); }}/>;
+        case "home": return <ClientHome user={user} onProfSelect={setSelectedProf} onOpenChat={goToChat} onSearch={q => { setSearchQ(q); setClientTab("search"); }}/>;
         
         case "profile": return <ProfProfile user={user} onLogout={logout} />;
         default: return null;
@@ -2860,7 +2968,8 @@ export default function BuildMatchApp() {
     };
   return (
     <div className="app-container" style={{ maxWidth: "100%", margin: "0 auto" }}>
-      <div style={{ paddingBottom: 80, overflowY: "auto" }}>{renderPro()}</div>
+      <AppHeader onLogout={logout} />
+      <div style={{ paddingBottom: profTab === "messages" ? 0 : 80, overflowY: profTab === "messages" ? "hidden" : "auto" }}>{renderPro()}</div>
       <ProfNav active={profTab} onChange={setProfTab} />
       {successMsg && <SuccessModal message={successMsg} onClose={() => setSuccessMsg(null)} />}
     </div>
@@ -2873,14 +2982,15 @@ export default function BuildMatchApp() {
       case "home": return <ClientHome user={user} onProfSelect={setSelectedProf} onSearch={q => { setSearchQ(q); setClientTab("search"); }} />;
       case "search": return <ClientSearch query={searchQ} onProfSelect={setSelectedProf} />;
       case "projects": return <ClientProjects />;
-      case "messages": return <ClientMessages onOpenChat={setOpenChat} />;
+      case "messages": return <MessagesLayout user={user} initialConv={openChat} onConsumeInitial={() => setOpenChat(null)} />;
       default: return null;
     }
   };
 
   return (
     <div className="app-container" style={{ maxWidth: "100%", margin: "0 auto" }}>
-      <div style={{ paddingBottom: 80, overflowY: "auto" }}>{renderClient()}</div>
+      <AppHeader onLogout={logout} />
+      <div style={{ paddingBottom: clientTab === "messages" ? 0 : 80, overflowY: clientTab === "messages" ? "hidden" : "auto" }}>{renderClient()}</div>
       <ClientNav active={clientTab} onChange={tab => { setClientTab(tab); setSearchQ(""); }} />
       {successMsg && <SuccessModal message={successMsg} onClose={() => setSuccessMsg(null)} />}
     </div>

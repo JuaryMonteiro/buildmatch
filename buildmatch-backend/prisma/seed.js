@@ -1,4 +1,4 @@
-// prisma/seed.js
+
 const bcrypt = require('bcrypt');
 const prisma = require('../src/lib/prisma');
 
@@ -148,9 +148,25 @@ async function main() {
         projectId: project.id,
       },
     });
+  }
 
-    // Criar 10 publicações de portfólio
-    const portfolioItems = [
+  // Limpar portfólios antigos antes de recriar, para evitar duplicados
+  // ao correr este script mais de uma vez
+  const allProfessionalIds = [
+    prof1User.professional?.id,
+    prof2User.professional?.id,
+    prof3User.professional?.id,
+  ].filter(Boolean);
+
+  if (allProfessionalIds.length > 0) {
+    await prisma.portfolio.deleteMany({
+      where: { professionalId: { in: allProfessionalIds } },
+    });
+  }
+
+  // Portfólio do João (Pedreiro)
+  if (prof1User.professional) {
+    const portfolioJoao = [
       {
         title: 'Moradia T3 em Assomada',
         description: 'Construção completa de moradia T3 com garagem',
@@ -213,10 +229,132 @@ async function main() {
       },
     ];
 
-    for (const item of portfolioItems) {
+    for (const item of portfolioJoao) {
       await prisma.portfolio.create({
         data: {
           professionalId: prof1User.professional.id,
+          title: item.title,
+          description: item.description,
+          imageUrls: '',
+          category: item.category,
+          featured: item.featured,
+        },
+      });
+    }
+  }
+
+  // Portfólio da Maria (Eletricista)
+  if (prof2User.professional) {
+    const portfolioMaria = [
+      {
+        title: 'Instalação Elétrica Residencial Completa',
+        description: 'Instalação elétrica de raiz em moradia T4, incluindo quadro elétrico e certificação',
+        category: 'Residencial',
+        featured: true,
+      },
+      {
+        title: 'Painéis Solares em Edifício Comercial',
+        description: 'Instalação de sistema fotovoltaico de 10kW em armazém industrial',
+        category: 'Industrial',
+        featured: true,
+      },
+      {
+        title: 'Renovação de Quadro Elétrico',
+        description: 'Substituição e modernização de quadro elétrico antigo com disjuntores diferenciais',
+        category: 'Residencial',
+        featured: false,
+      },
+      {
+        title: 'Iluminação de Espaço Comercial',
+        description: 'Projeto e instalação de iluminação LED para loja de retalho',
+        category: 'Comercial',
+        featured: false,
+      },
+      {
+        title: 'Sistema de Videovigilância',
+        description: 'Instalação de sistema de CCTV com 8 câmaras para condomínio residencial',
+        category: 'Residencial',
+        featured: false,
+      },
+      {
+        title: 'Instalação Elétrica Industrial',
+        description: 'Cablagem e instalação de quadros de força para linha de produção fabril',
+        category: 'Industrial',
+        featured: true,
+      },
+      {
+        title: 'Carregador para Veículo Elétrico',
+        description: 'Instalação de wallbox para carregamento de carro elétrico em garagem privada',
+        category: 'Residencial',
+        featured: false,
+      },
+      {
+        title: 'Automação Residencial',
+        description: 'Instalação de sistema de domótica para controlo de luzes e estores',
+        category: 'Residencial',
+        featured: false,
+      },
+    ];
+
+    for (const item of portfolioMaria) {
+      await prisma.portfolio.create({
+        data: {
+          professionalId: prof2User.professional.id,
+          title: item.title,
+          description: item.description,
+          imageUrls: '',
+          category: item.category,
+          featured: item.featured,
+        },
+      });
+    }
+  }
+
+  // Portfólio do Carlos (Canalizador)
+  if (prof3User.professional) {
+    const portfolioCarlos = [
+      {
+        title: 'Sistema de Abastecimento de Água',
+        description: 'Instalação completa de rede de água em moradia nova de 2 pisos',
+        category: 'Residencial',
+        featured: true,
+      },
+      {
+        title: 'Reparação de Fuga em Rede de Esgotos',
+        description: 'Deteção e reparação de fuga em canalização de esgoto subterrânea',
+        category: 'Residencial',
+        featured: false,
+      },
+      {
+        title: 'Sistema de Rega Automática',
+        description: 'Instalação de rede de rega automática para jardim de 500m²',
+        category: 'Residencial',
+        featured: false,
+      },
+      {
+        title: 'Renovação de Canalização de Casa de Banho',
+        description: 'Substituição completa de tubagens antigas em casa de banho remodelada',
+        category: 'Residencial',
+        featured: true,
+      },
+      {
+        title: 'Instalação de Fossa Séptica',
+        description: 'Instalação e ligação de fossa séptica para propriedade rural',
+        category: 'Saneamento',
+        featured: false,
+      },
+      {
+        title: 'Rede de Saneamento Comercial',
+        description: 'Instalação de rede de saneamento para restaurante, incluindo separador de gorduras',
+        category: 'Comercial',
+        featured: false,
+      },
+    ];
+
+    for (const item of portfolioCarlos) {
+      await prisma.portfolio.create({
+        data: {
+          professionalId: prof3User.professional.id,
           title: item.title,
           description: item.description,
           imageUrls: '',
@@ -234,6 +372,7 @@ async function main() {
   console.log('  Cliente:      ana@exemplo.com        / 123456');
   console.log('  Profissional: joao.pedreiro@exemplo.com / 123456');
   console.log('  Profissional: maria.eletricista@exemplo.com / 123456');
+  console.log('  Profissional: carlos.canalizador@exemplo.com / 123456');
 }
 
 main()

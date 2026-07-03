@@ -629,10 +629,11 @@ module.exports = (req, res, next) => {
 const express = require('express');
 const bcrypt  = require('bcrypt');
 const jwt     = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
+
+
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const SALT_ROUNDS = 12;
 
 // POST /api/auth/register
@@ -737,11 +738,12 @@ module.exports = router;
 // src/routes/professionals.js
 
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+
+
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 // GET /api/professionals — Listar com filtros
 router.get('/', async (req, res) => {

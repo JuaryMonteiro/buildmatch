@@ -122,6 +122,13 @@ router.put('/:id', authMiddleware, async (req, res) => {
       address, city, island, postalCode,
     } = req.body;
 
+    // Verificar se o profissional existe e pertence ao utilizador logado
+    const prof = await prisma.professional.findUnique({ where: { id: req.params.id } });
+    if (!prof) return res.status(404).json({ error: 'Profissional não encontrado' });
+    if (prof.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Sem permissão para alterar este perfil' });
+    }
+
     const professional = await prisma.professional.update({
       where: { id: req.params.id },
       data: {

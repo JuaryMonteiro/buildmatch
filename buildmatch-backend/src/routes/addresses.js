@@ -52,6 +52,13 @@ router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const { label, address, default: isDefault } = req.body;
 
+    // Verificar se o endereço existe e pertence ao utilizador logado
+    const existing = await prisma.address.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: 'Endereço não encontrado' });
+    if (existing.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Sem permissão para alterar este endereço' });
+    }
+
     if (isDefault) {
       await prisma.address.updateMany({
         where: { userId: req.user.id },
@@ -73,6 +80,13 @@ router.put('/:id', authMiddleware, async (req, res) => {
 // DELETE /api/addresses/:id — remover endereço
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
+    // Verificar se o endereço existe e pertence ao utilizador logado
+    const existing = await prisma.address.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: 'Endereço não encontrado' });
+    if (existing.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Sem permissão para remover este endereço' });
+    }
+
     await prisma.address.delete({ where: { id: req.params.id } });
     res.json({ message: 'Endereço removido' });
   } catch (err) {

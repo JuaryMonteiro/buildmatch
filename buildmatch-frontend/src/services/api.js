@@ -17,7 +17,7 @@ async function request(endpoint, options = {}) {
 
   const response = await fetch(`${BASE_URL}${endpoint}`, config);
 
-  if (response.status === 401) {
+  if (response.status === 401 && endpoint !== '/api/auth/login' && endpoint !== '/api/auth/register') {
     localStorage.removeItem('buildmatch_token');
     localStorage.removeItem('buildmatch_user');
     window.location.reload();
@@ -100,4 +100,13 @@ export const addressesAPI = {
   create:    (body)     => request('/api/addresses',      { method: 'POST',   body: JSON.stringify(body) }),
   update:    (id, body) => request(`/api/addresses/${id}`, { method: 'PUT',    body: JSON.stringify(body) }),
   delete:    (id)       => request(`/api/addresses/${id}`, { method: 'DELETE' }),
+};
+
+// ── NOTIFICATIONS ──────────────────────────────────
+export const notificationsAPI = {
+  list:         ()   => request('/api/notifications'),
+  unreadCount:  ()   => request('/api/notifications/unread-count'),
+  markRead:     (id) => request(`/api/notifications/${id}/read`, { method: 'PUT' }),
+  markAllRead:  ()   => request('/api/notifications/read-all',   { method: 'PUT' }),
+  delete:       (id) => request(`/api/notifications/${id}`,      { method: 'DELETE' }),
 };

@@ -33,6 +33,27 @@ router.post('/', authMiddleware, async (req, res) => {
       data: { professionalId, date: new Date(date), startTime, endTime, available: false },
     });
 
+    // ── Notificar o profissional sobre o agendamento ──
+    try {
+      const professional = await prisma.professional.findUnique({
+        where: { id: professionalId },
+        select: { userId: true },
+      });
+      if (professional) {
+        await prisma.notificacao.create({
+          data: {
+            titulo: 'Novo Agendamento',
+            mensagem: `Novo agendamento marcado para ${new Date(date).toLocaleDateString('pt-PT')} das ${startTime} às ${endTime}.`,
+            type: 'AGENDAMENTO',
+            status: 'NAO_LIDA',
+            userId: professional.userId,
+          },
+        });
+      }
+    } catch (notifErr) {
+      console.error('Erro ao criar notificação de agendamento:', notifErr);
+    }
+
     res.status(201).json(schedule);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao criar agendamento' });
