@@ -5,22 +5,22 @@ import logo from "./assets/logo.png";
 import AppHeader from "./components/AppHeader";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faHome, faSearch, faClipboardList, faComments, faUser,
+  faHome, faSearch, faClipboardList, faComments, faUser, faUsers,
   faChartBar, faCalendarAlt, faImages, faHardHat,
   faBell, faLock, faQuestionCircle, faStar, faMapMarkerAlt,
   faPencilAlt, faCamera, faSignOutAlt, faSave, faPlus, faTimes, faCheck,
   faArrowLeft, faPaperPlane, faPhone, faEnvelope,
   faTools, faBolt, faFaucet, faPaintRoller, faTree, faDraftingCompass,
   faWrench, faChevronRight, faChevronDown,
-  faCheckCircle, faClock, faBan,
-  faShieldAlt, faReply, faEdit, faEye,
+  faCheckCircle, faClock,
+  faShieldAlt, faReply,
   faTachometerAlt, faMoneyBillWave,
   faExclamationCircle, faInfoCircle, faLightbulb,
-  faHandshake, faUserTie, faUserCheck, faSmile, faPaperclip,
-  faUserCircle, faBuilding, faGlobe, faThumbsUp, faKey,
-  faHammer, faChartLine, faLocationArrow, faCog,
+  faUserCheck,
+  faBuilding, faKey,
+  faHammer, faChartLine, faCog,
 } from "@fortawesome/free-solid-svg-icons";
-
+import AdminDashboard from "./AdminDashboard";
 // ── Componente ícone ───────────────────────────────────────
 const Icon = ({ icon, size = 16, color, style: ex }) => (
   <FontAwesomeIcon icon={icon} style={{ fontSize: size, color: color || "currentColor", ...ex }} />
@@ -80,7 +80,12 @@ const CATEGORIES = [
 // ============================================================
 // COMPONENTES BASE
 // ============================================================
-const Avatar = ({ name = "", color, size = 40 }) => {
+const Avatar = ({ name = "", color, size = 40, src }) => {
+  if (src) {
+    return (
+      <img src={src} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+    );
+  }
   const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "U";
   const colors = [C.primary, C.accent, C.primaryDark, "#c96800", C.purple];
   const bg = color || colors[name.charCodeAt(0) % colors.length];
@@ -238,12 +243,20 @@ const Login = ({ onLogin }) => {
       onLogin(data.user);
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
+    
+    const data = mode === "login"
+      ? await authAPI.login({ email, password: pass })
+      : await authAPI.register({ name, email, password: pass, type });
+
+    if (mode === "register" && data.message) {
+      alert(data.message); // ou use o SuccessModal já existente na app
+    }
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: C.lightGray, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: C.lightGray, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ width: "100%", maxWidth: 420 }}>
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
+        <div style={{ textAlign: "center", }}>
           <img src={logo} alt="BuildMatch Logo" style={{ width: 180 }} />
         </div>
         <Card>
@@ -331,7 +344,7 @@ const ProfCard = ({ prof, onClick }) => {
     <Card style={{ padding: 16, marginBottom: 12 }} onClick={onClick}>
       <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
         <div style={{ position: "relative" }}>
-          <Avatar name={name} size={52} />
+          <Avatar name={name} size={52} src={prof.user?.avatar} />
           {prof.available && <div style={{ position: "absolute", bottom: 2, right: 2, width: 12, height: 12, background: C.success, borderRadius: "50%", border: "2px solid white" }} />}
         </div>
         <div style={{ flex: 1 }}>
@@ -436,7 +449,9 @@ const PinterestGallery = ({ onProfSelect, onMessage }) => {
           const { portfolioAPI } = await import("./services/api");
           const port = await portfolioAPI.list(prof.id);
           (port.data || []).forEach(item => all.push({ ...item, prof }));
-        } catch {}
+        } catch {
+          /* ignore error */
+        }
       }
       setItems(all);
     }).catch(() => setItems([])).finally(() => setL(false));
@@ -484,7 +499,7 @@ const PinterestGallery = ({ onProfSelect, onMessage }) => {
         }
         <div style={{ padding: "8px 10px 10px" }}>
           {item.category && (
-            <span style={{  background: C.primary,
+            <span style={{ background: catStyle.bg, color: catStyle.color,
               fontSize: 9, fontWeight: 700, padding: "2px 7px",
               borderRadius: 8, display: "inline-block", marginBottom: 4 }}>
               {item.category}
@@ -494,7 +509,7 @@ const PinterestGallery = ({ onProfSelect, onMessage }) => {
             {item.title}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 5 }}>
-            <Avatar name={item.prof?.user?.name || "?"} size={16} />
+            <Avatar name={item.prof?.user?.name || "?"} size={16} src={item.prof?.user?.avatar} />
             <span style={{ fontSize: 10, color: C.gray, fontWeight: 500 }}>
               {item.prof?.user?.name}
             </span>
@@ -579,7 +594,7 @@ const PinterestGallery = ({ onProfSelect, onMessage }) => {
               <div onClick={() => { setSelected(null); onProfSelect(selected.prof); }}
                 style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
                   background: C.lightGray, borderRadius: 12, marginBottom: 14, cursor: "pointer" }}>
-                <Avatar name={selected.prof?.user?.name} size={40} />
+                <Avatar name={selected.prof?.user?.name} size={40} src={selected.prof?.user?.avatar} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, color: C.dark, fontSize: 14 }}>
                     {selected.prof?.user?.name}
@@ -668,72 +683,56 @@ const PinterestGallery = ({ onProfSelect, onMessage }) => {
     </div>
   );
 };
-
-// ============================================================
-// HOME DO CLIENTE
-// ============================================================
-const ClientHome = ({user, onProfSelect, onSearch, onOpenChat }) => {
+const ClientHome = ({ onProfSelect, onSearch, onOpenChat, categories }) => {
   const [profs, setProfs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [q, setQ] = useState("");
-  const [homePHIndex, setHomePHIndex] = useState(0);
-  const [homePHVisible, setHomePHVisible] = useState(true);
-  const HOME_PLACEHOLDERS = [
-    "Que serviço precisa?",
-    "Pedreiro...",
-    "Eletricista...",
-    "Canalizador...",
-    "Pintor...",
-    "Carpinteiro...",
-    "Engenheiro Civil...",
-    "Serralheiro...",
-  ];
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setHomePHVisible(false);
-      setTimeout(() => {
-        setHomePHIndex(i => (i + 1) % HOME_PLACEHOLDERS.length);
-        setHomePHVisible(true);
-      }, 400);
-    }, 2500);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     professionalsAPI.list({ limit: 4, sortBy: "rating" })
       .then(d => setProfs(d.data || [])).catch(() => setProfs([])).finally(() => setLoading(false));
   }, []);
 
-
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ padding: "20px 16px" }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 14 }}>Categorias</h3>
         <div className="categories-grid">
-          {CATEGORIES.map((cat, i) => (
-            <div key={i} className="category-card" onClick={() => onSearch(cat.name)}>
-              <img src={cat.img} alt={cat.name}
-                onError={e => {
-                  e.target.style.display = "none";
-                  e.target.parentElement.style.background = i % 2 === 0 ? C.primary : C.accent;
-                  const fb = e.target.parentElement.querySelector(".cat-icon-fallback");
-                  if (fb) fb.style.display = "flex";
-                }}
-              />
-              <div className="cat-icon-fallback" style={{ display: "none", position: "absolute", inset: 0, alignItems: "center", justifyContent: "center" }}>
-                <Icon icon={categoryIconMap[cat.name] || faTools} size={32} color="rgba(255,255,255,0.8)" />
+          {(categories && categories.length > 0 ? categories : CATEGORIES).map((cat, i) => {
+            const imgUrl = cat.img && (cat.img.startsWith("http") || cat.img.startsWith("/"))
+              ? cat.img
+              : `${BASE}${cat.img || ""}`;
+            return (
+              <div key={i} className="category-card" onClick={() => onSearch(cat.name)}>
+                <img src={imgUrl} alt={cat.name}
+                  onError={e => {
+                    e.target.style.display = "none";
+                    e.target.parentElement.style.background = i % 2 === 0 ? C.primary : C.accent;
+                    const fb = e.target.parentElement.querySelector(".cat-icon-fallback");
+                    if (fb) fb.style.display = "flex";
+                  }}
+                />
+                <div className="cat-icon-fallback" style={{ display: "none", position: "absolute", inset: 0, alignItems: "center", justifyContent: "center" }}>
+                  <Icon icon={categoryIconMap[cat.name] || faTools} size={32} color="rgba(255,255,255,0.8)" />
+                </div>
+                <div className="overlay" />
+                <div className="label">{cat.name}</div>
               </div>
-              <div className="overlay" />
-              <div className="label">{cat.name}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, color: C.dark, margin: 0 }}>Recomendados</h3>
           <span onClick={() => onSearch("")} style={{ color: C.primary, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Ver todos</span>
         </div>
+
+        {loading ? <Spinner /> : (profs.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
+            {profs.map(prof => (
+              <ProfCard key={prof.id} prof={prof} onClick={() => onProfSelect(prof)} />
+            ))}
+          </div>
+        ))}
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, marginTop: 8 }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, color: C.dark, margin: 0 }}>
@@ -751,7 +750,9 @@ const ClientHome = ({user, onProfSelect, onSearch, onOpenChat }) => {
                 description: "Pedido de orçamento via portfólio"
               });
               onOpenChat({ id: project.id, title: `Contacto — ${prof.specialty}`, professional: prof });
-            } catch {}
+            } catch {
+              /* ignore error */
+            }
           }}
         />
 
@@ -1029,10 +1030,13 @@ const MessagesLayout = ({ user, initialConv, onConsumeInitial }) => {
   // Se chegou aqui a partir de "Mensagem" no perfil de um profissional, abre já essa conversa
   useEffect(() => {
     if (!initialConv) return;
-    setConvs(prev => dedupeConversations([initialConv, ...prev]));
-    setSelected(initialConv);
-    onConsumeInitial?.();
-  }, [initialConv]);
+    const t = setTimeout(() => {
+      setConvs(prev => dedupeConversations([initialConv, ...prev]));
+      setSelected(initialConv);
+      onConsumeInitial?.();
+    }, 0);
+    return () => clearTimeout(t);
+  }, [initialConv, onConsumeInitial]);
 
   const filtered = convs.filter(conv => {
     const name = conv.professional?.user?.name || conv.client?.name || "";
@@ -1061,7 +1065,7 @@ const MessagesLayout = ({ user, initialConv, onConsumeInitial }) => {
               const isActive = selected?.id === conv.id;
               return (
                 <div key={conv.id} onClick={() => setSelected(conv)} style={{ background: isActive ? `${C.primary}10` : C.white, borderRadius: 14, padding: "14px 16px", display: "flex", gap: 12, alignItems: "center", cursor: "pointer", marginBottom: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.05)", border: `1.5px solid ${isActive ? C.primary : C.border}` }}>
-                  <Avatar name={name} size={50} />
+                  <Avatar name={name} size={50} src={conv.professional?.user?.avatar || conv.client?.avatar} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <span style={{ fontWeight: 700, color: C.dark, fontSize: 14 }}>{name}</span>
@@ -1122,8 +1126,15 @@ const dedupeConversations = (list) => {
 // ============================================================
 // PERFIL DO CLIENTE
 // ============================================================
-const ClientProfile = ({ user, onLogout, onUpdate }) => {
-  const [section, setSection] = useState(null);
+const ClientProfile = ({ user, onLogout, onUpdate, initialSection, onSectionChange }) => {
+  const [section, setSection] = useState(initialSection || null);
+
+  useEffect(() => {
+    if (initialSection) {
+      setSection(initialSection);
+      if (onSectionChange) onSectionChange(null);
+    }
+  }, [initialSection]);
   const [successMsg, setSuccessMsg] = useState(null);
 
   const showSuccess = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(null), 3001); };
@@ -1139,7 +1150,7 @@ const ClientProfile = ({ user, onLogout, onUpdate }) => {
     const [email, setEmail] = useState(user?.email || "");
     const [phone, setPhone] = useState(user?.phone || "");
     const [saving, setSaving] = useState(false);
-    const [photoURL, setPhotoURL] = useState(user?.photo || null);
+    const [photoURL, setPhotoURL] = useState(user?.avatar || user?.photo || null);
     const fileRef = useRef(null);
 
     const handlePhoto = (e) => {
@@ -1154,8 +1165,8 @@ const ClientProfile = ({ user, onLogout, onUpdate }) => {
       setSaving(true);
       try {
         const { usersAPI } = await import("./services/api");
-        const updated = await usersAPI.update(user.id, { name, phone });
-        const newUser = { ...user, ...updated, photo: photoURL };
+        const updated = await usersAPI.update(user.id, { name, phone, avatar: photoURL });
+        const newUser = { ...user, ...updated, avatar: photoURL };
         localStorage.setItem("buildmatch_user", JSON.stringify(newUser));
         onUpdate(newUser);  
         showSuccess("Perfil actualizado com sucesso!");
@@ -1174,14 +1185,7 @@ const ClientProfile = ({ user, onLogout, onUpdate }) => {
         {/* Foto centralizada */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 32 }}>
           <div style={{ position: "relative", display: "inline-block" }}>
-            {photoURL
-              ? <img src={photoURL} alt="Foto de perfil"
-                style={{
-                  width: 96, height: 96, borderRadius: "50%", objectFit: "cover",
-                  border: `3px solid ${C.primary}`, boxShadow: "0 4px 16px rgba(0,0,0,0.12)"
-                }} />
-              : <Avatar name={name} color={C.accent} size={96} />
-            }
+            <Avatar name={name} color={C.accent} size={96} src={photoURL} />
             {/* Botão de câmera por cima */}
             <button
               onClick={() => fileRef.current?.click()}
@@ -1507,7 +1511,7 @@ const ClientProfile = ({ user, onLogout, onUpdate }) => {
       {successMsg && <SuccessModal message={successMsg} onClose={() => setSuccessMsg(null)} />}
       <div style={{ background: C.primary, padding: "28px 16px 50px", textAlign: "center" }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 32 }}>
-          <Avatar name={user?.name} color={C.accent} size={80} />
+          <Avatar name={user?.name} color={C.accent} size={80} src={user?.avatar} />
         </div>
         <h2 style={{ color: "#fff", fontSize: 20, fontWeight: 800, marginTop: 12, marginBottom: 4 }}>{user?.name}</h2>
         <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, margin: 0 }}>{user?.email}</p>
@@ -1531,7 +1535,7 @@ const ClientProfile = ({ user, onLogout, onUpdate }) => {
                 onMouseEnter={e => e.currentTarget.style.background = C.lightGray}
                 onMouseLeave={e => e.currentTarget.style.background = "transparent"}
               >
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: C.pr, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: `${C.primary}15`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <Icon icon={item.icon} size={18} color={C.primary} />
                 </div>
                 <div style={{ flex: 1 }}>
@@ -1634,8 +1638,8 @@ const ProfProjects = () => {
     tab === "active" ? p.status === "ACTIVE" : tab === "done" ? p.status === "COMPLETED" : p.status === "PENDING"
   );
 
-  const accept = async (id) => { try { await projectsAPI.update(id, { status: "ACTIVE" }); setProjects(p => p.map(proj => proj.id === id ? { ...proj, status: "ACTIVE" } : proj)); } catch { } };
-  const complete = async (id) => { try { await projectsAPI.update(id, { status: "COMPLETED" }); setProjects(p => p.map(proj => proj.id === id ? { ...proj, status: "COMPLETED" } : proj)); } catch { } };
+  const accept = async (id) => { try { await projectsAPI.update(id, { status: "ACTIVE" }); setProjects(p => p.map(proj => proj.id === id ? { ...proj, status: "ACTIVE" } : proj)); } catch { /* ignore error */ } };
+  const complete = async (id) => { try { await projectsAPI.update(id, { status: "COMPLETED" }); setProjects(p => p.map(proj => proj.id === id ? { ...proj, status: "COMPLETED" } : proj)); } catch { /* ignore error */ } };
 
   return (
     <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
@@ -1693,14 +1697,19 @@ const ProfAgenda = ({ user }) => {
 
   useEffect(() => {
     if (!user?.professional?.id) { setL(false); return; }
-    schedulesAPI.list(user.professional.id).then(d => setSchedules(d.data || [])).catch(() => setSchedules([])).finally(() => setL(false));
+    // Usa o endpoint autenticado "mine" para ver TODOS os horários,
+    // incluindo os já reservados por clientes (não apenas os livres).
+    schedulesAPI.mine().then(d => setSchedules(d.data || [])).catch(() => setSchedules([])).finally(() => setL(false));
   }, []);
 
   const addSlot = async () => {
     if (!date || !user?.professional?.id) return;
     setSaving(true);
     try {
-      const s = await schedulesAPI.create({ professionalId: user.professional.id, date, startTime: start, endTime: end });
+      // O professionalId é sempre determinado no servidor a partir do
+      // utilizador autenticado — nunca enviado pelo cliente (evita
+      // que alguém crie disponibilidade em nome de outro profissional).
+      const s = await schedulesAPI.create({ date, startTime: start, endTime: end });
       setSchedules(prev => [...prev, s]); setDate("");
     } catch (err) { alert(err.message); } finally { setSaving(false); }
   };
@@ -1780,7 +1789,7 @@ const ProfPortfolio = ({ user }) => {
     const { portfolioAPI } = await import("./services/api");
     if (editItem) {
       // Editar existente
-      const updated = await portfolioAPI.update(editItem.id, {
+      await portfolioAPI.update(editItem.id, {
         title, description: desc, category: cat,
         imageUrls: stringifyImages(photos)
       });
@@ -2084,8 +2093,15 @@ const ProfPortfolio = ({ user }) => {
 // ============================================================
 // PERFIL DO PROFISSIONAL
 // ============================================================
-const ProfProfile = ({ user, onLogout }) => {
-  const [section, setSection] = useState(null);
+const ProfProfile = ({ user, onLogout, onUpdate, initialSection, onSectionChange, specialties }) => {
+  const [section, setSection] = useState(initialSection || null);
+
+  useEffect(() => {
+    if (initialSection) {
+      setSection(initialSection);
+      if (onSectionChange) onSectionChange(null);
+    }
+  }, [initialSection]);
   const [successMsg, setSuccessMsg] = useState(null);
 
   const showSuccess = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(null), 3001); };
@@ -2113,29 +2129,82 @@ const ProfProfile = ({ user, onLogout }) => {
     const [tags, setTags] = useState(prof.tags || "");
     const [available, setAvailable] = useState(prof.available ?? true);
     const [saving, setSaving] = useState(false);
+    const [photoURL, setPhotoURL] = useState(user?.avatar || user?.photo || null);
+    const [coverURL, setCoverURL] = useState(prof.coverPhoto || null);
+    const avatarRef = useRef(null);
+    const coverRef = useRef(null);
 
-    const SPECIALTIES = ["Pedreiro", "Eletricista", "Canalizador", "Pintor", "Carpinteiro", "Engenheiro Civil", "Arquitecto", "Serralheiro"];
+    const finalSpecialties = specialties && specialties.length > 0
+      ? specialties
+      : ["Pedreiro", "Eletricista", "Canalizador", "Pintor", "Carpinteiro", "Engenheiro Civil", "Arquitecto", "Serralheiro"];
+
+    const handlePhoto = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => setPhotoURL(ev.target.result);
+      reader.readAsDataURL(file);
+    };
+
+    const handleCover = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => setCoverURL(ev.target.result);
+      reader.readAsDataURL(file);
+    };
 
     const save = async () => {
       setSaving(true);
       try {
         const { usersAPI, professionalsAPI } = await import("./services/api");
-        await usersAPI.update(user.id, { name, phone });
+
+        // Só envia avatar se foi alterado (evita payload gigante em cada save)
+        const userPayload = { name, phone };
+        const originalAvatar = user?.avatar || user?.photo || null;
+        if (photoURL !== originalAvatar) {
+          userPayload.avatar = photoURL;
+        }
+
+        await usersAPI.update(user.id, userPayload);
+
+        let updatedProf = {};
         if (prof.id) {
-          await professionalsAPI.update(prof.id, {
-            specialty, location, about, available,
-            priceMin: parseFloat(priceMin) || null,
-            priceMax: parseFloat(priceMax) || null,
-            experience: parseInt(experience) || 0,
+          updatedProf = await professionalsAPI.update(prof.id, {
+            specialty,
+            location,
+            about,
+            available,
+            priceMin: priceMin !== "" ? priceMin : null,
+            priceMax: priceMax !== "" ? priceMax : null,
+            experience: experience !== "" ? experience : 0,
             tags,
             address, city, island, postalCode,
+            coverPhoto: coverURL,
           });
         }
-        localStorage.setItem("buildmatch_user", JSON.stringify({ ...user, name, phone, professional: { ...prof, specialty, location, about, available, priceMin, priceMax, experience, tags } }));
+
+        const newUser = {
+          ...user,
+          name,
+          phone,
+          avatar: photoURL,
+          professional: {
+            ...prof,
+            ...updatedProf,
+            specialty, location, about, available,
+            priceMin, priceMax, experience, tags,
+            address, city, island, postalCode,
+            coverPhoto: coverURL,
+          }
+        };
+        localStorage.setItem("buildmatch_user", JSON.stringify(newUser));
+        onUpdate(newUser);
         showSuccess("Perfil actualizado com sucesso!");
         setSection(null);
-      } catch (err) { alert(err.message); } finally { setSaving(false); }
-
+      } catch (err) {
+        alert("Erro ao guardar: " + (err.message || "Tente novamente."));
+      } finally { setSaving(false); }
     };
 
     return (
@@ -2144,14 +2213,49 @@ const ProfProfile = ({ user, onLogout }) => {
           <BackBtn />
           <h2 style={{ fontSize: 18, fontWeight: 800, color: C.dark, margin: 0 }}>Editar Perfil</h2>
         </div>
-        <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <div style={{ position: "relative", display: "inline-block" }}>
-            <Avatar name={name} color={C.accent} size={88} />
-            <button style={{ position: "absolute", bottom: 0, right: 0, background: C.accent, border: "none", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        
+        {/* Cover Photo Banner & Avatar */}
+        <div style={{
+          position: "relative",
+          height: 140,
+          borderRadius: 16,
+          backgroundImage: coverURL ? `linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.4)), url(${coverURL})` : "none",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundColor: coverURL ? "transparent" : C.primary,
+          marginBottom: 60,
+          display: "flex",
+          justifyContent: "center"
+        }}>
+          <button
+            onClick={() => coverRef.current?.click()}
+            style={{
+              position: "absolute", top: 12, right: 12,
+              background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.4)",
+              borderRadius: 8, padding: "6px 12px", cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 6, color: "#fff", fontSize: 12, fontWeight: 600
+            }}>
+            <Icon icon={faCamera} size={12} color="#fff" /> Alterar Capa
+          </button>
+          <input ref={coverRef} type="file" accept="image/*" onChange={handleCover} style={{ display: "none" }} />
+
+          <div style={{ position: "absolute", bottom: -44, display: "inline-block" }}>
+            <Avatar name={name} color={C.accent} size={88} src={photoURL} />
+            <button
+              onClick={() => avatarRef.current?.click()}
+              style={{
+                position: "absolute", bottom: 0, right: 0,
+                background: C.accent, border: "2px solid #fff",
+                width: 30, height: 30, borderRadius: "50%", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
+              }}>
               <Icon icon={faCamera} size={12} color="#fff" />
             </button>
+            <input ref={avatarRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
           </div>
         </div>
+
         <Card style={{ marginBottom: 14 }}>
           <h4 style={{ margin: "0 0 14px", color: C.dark, fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
             <Icon icon={faUser} size={14} color={C.accent} /> Dados pessoais
@@ -2167,9 +2271,10 @@ const ProfProfile = ({ user, onLogout }) => {
             <label style={{ fontSize: 13, fontWeight: 600, color: C.dark, display: "block", marginBottom: 6 }}>Especialidade</label>
             <select value={specialty} onChange={e => setSpecialty(e.target.value)} style={{ width: "100%", padding: "12px 14px", border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontFamily: "'DM Sans', sans-serif", outline: "none", background: C.white }}>
               <option value="">Seleccionar especialidade</option>
-              {SPECIALTIES.map(s => <option key={s} value={s}>{s}</option>)}
+              {finalSpecialties.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
+          <Input label="Localização (ex: Praia, Santiago)" value={location} onChange={e => setLocation(e.target.value)} placeholder="Ex: Praia, Santiago" />
           <Input label="Endereço (rua, número)" value={address} onChange={e => setAddress(e.target.value)} placeholder="Ex: Rua de Achada Santo António, 12" />
           <div style={{ display: "flex", gap: 10 }}>
             <div style={{ flex: 2 }}><Input label="Cidade" value={city} onChange={e => setCity(e.target.value)} placeholder="Ex: Praia" /></div>
@@ -2483,8 +2588,15 @@ const ProfProfile = ({ user, onLogout }) => {
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
       {successMsg && <SuccessModal message={successMsg} onClose={() => setSuccessMsg(null)} />}
-      <div style={{background: C.primary, padding: "28px 16px 50px", textAlign: "center" }}>
-        <Avatar name={user?.name} color={C.accent} size={80} />
+      <div style={{
+        backgroundImage: prof?.coverPhoto ? `linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.6)), url(${prof.coverPhoto})` : "none",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundColor: prof?.coverPhoto ? "transparent" : C.primary,
+        padding: "28px 16px 50px",
+        textAlign: "center"
+      }}>
+        <Avatar name={user?.name} color={C.accent} size={80} src={user?.avatar} />
         <h2 style={{ color: "#fff", fontSize: 20, fontWeight: 800, marginTop: 12, marginBottom: 4 }}>{user?.name}</h2>
         <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, margin: 0 }}>{prof?.specialty || "Profissional"}</p>
         <div style={{ background: C.accent, display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 16px", borderRadius: 20, marginTop: 8 }}>
@@ -2568,7 +2680,10 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
 
   // ── Ligação Socket.IO — chat em tempo real ──────
   useEffect(() => {
-    const socket = io(SOCKET_URL, { transports: ["websocket"] });
+    const socket = io(SOCKET_URL, {
+      transports: ["websocket"],
+      auth: { token: localStorage.getItem("buildmatch_token") },
+    });
     socketRef.current = socket;
     socket.emit("join_room", conversation.id);
 
@@ -2628,6 +2743,7 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
 
   const name = conversation.professional?.user?.name || conversation.client?.name || "Utilizador";
   const subtitle = conversation.title || conversation.professional?.specialty || "";
+  const peerAvatar = conversation.professional?.user?.avatar || conversation.client?.avatar || conversation.professional?.avatar;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: embedded ? "100%" : "100vh", fontFamily: "'DM Sans', sans-serif", background: C.lightGray }}>
@@ -2635,7 +2751,7 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
         <button onClick={onBack} style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", width: 36, height: 36, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Icon icon={faArrowLeft} size={14} color="#fff" />
         </button>
-        <Avatar name={name} size={42} />
+        <Avatar name={name} size={42} src={peerAvatar} />
         <div style={{ flex: 1 }}>
           <div style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>{name}</div>
           {subtitle && <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 1 }}>{subtitle}</div>}
@@ -2667,7 +2783,7 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
               const showAvatar = !isMe && (i === 0 || messages[i - 1]?.senderId !== msg.senderId);
               return (
                 <div key={msg.id} style={{ display: "flex", justifyContent: isMe ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 8 }}>
-                  {!isMe && <div style={{ width: 28, flexShrink: 0 }}>{showAvatar && <Avatar name={name} size={28} />}</div>}
+                  {!isMe && <div style={{ width: 28, flexShrink: 0 }}>{showAvatar && <Avatar name={name} size={28} src={peerAvatar} />}</div>}
                   <div style={{ maxWidth: "72%" }}>
                     <div style={{ padding: "10px 14px", borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: isMe ? (isPro ? "#1a1a2e" : C.primary) : C.white, color: isMe ? "#fff" : C.dark, fontSize: 14, lineHeight: 1.5, boxShadow: "0 1px 4px rgba(0,0,0,0.08)", opacity: msg.sending ? 0.7 : 1 }}>
                       {msg.content}
@@ -2681,7 +2797,7 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
             })}
             {peerTyping && (
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 28, flexShrink: 0 }}><Avatar name={name} size={28} /></div>
+                <div style={{ width: 28, flexShrink: 0 }}><Avatar name={name} size={28} src={peerAvatar} /></div>
                 <div style={{ padding: "10px 14px", borderRadius: "18px 18px 18px 4px", background: C.white, boxShadow: "0 1px 4px rgba(0,0,0,0.08)", display: "flex", gap: 4 }}>
                   {[0, 1, 2].map(i => (
                     <span key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: C.gray, opacity: 0.6, animation: `typingDot 1s ${i * 0.15}s infinite ease-in-out` }} />
@@ -2728,12 +2844,20 @@ const ProfessionalProfile = ({ prof, onBack, onMessage, onSchedule }) => {
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ background: C.primary, padding: "20px 16px 60px", borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
+      <div style={{
+        backgroundImage: data.coverPhoto ? `linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.6)), url(${data.coverPhoto})` : "none",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundColor: data.coverPhoto ? "transparent" : C.primary,
+        padding: "20px 16px 60px",
+        borderBottomLeftRadius: 28,
+        borderBottomRightRadius: 28
+      }}>
         <button onClick={onBack} style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", padding: "8px 14px", borderRadius: 10, cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif", marginBottom: 20, display: "flex", alignItems: "center", gap: 6 }}>
           <Icon icon={faArrowLeft} size={13} color="#fff" /> Voltar
         </button>
         <div style={{ textAlign: "center" }}>
-          <Avatar name={name} size={80} />
+          <Avatar name={name} size={80} src={data.user?.avatar} />
           <h2 style={{ color: "#fff", fontSize: 22, fontWeight: 800, marginTop: 12, marginBottom: 4 }}>{name}</h2>
           <p style={{ color: "rgba(255,255,255,0.8)", fontSize: 14, margin: 0 }}>{data.specialty}</p>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 8 }}>
@@ -2826,20 +2950,46 @@ const ProfessionalProfile = ({ prof, onBack, onMessage, onSchedule }) => {
 // ============================================================
 // AGENDAMENTO
 // ============================================================
+// O cliente só pode escolher entre os horários que o PRÓPRIO profissional
+// definiu como disponíveis (ver ProfAgenda). Nunca é possível inventar
+// uma data/hora arbitrária — isto é validado outra vez no servidor.
 const ScheduleScreen = ({ professional, onBack, onConfirm }) => {
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedTime, setSelectedTime] = useState(null);
-  const [loading, setL] = useState(false);
-  const times = ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"];
-  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() + i + 1); return d; });
+  const [slots, setSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(true);
+  const [selectedDateKey, setSelectedDateKey] = useState(null);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [booking, setBooking] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    schedulesAPI.list(professional.id)
+      .then(d => setSlots(d.data || []))
+      .catch(() => setSlots([]))
+      .finally(() => setLoadingSlots(false));
+  }, [professional.id]);
+
+  // Agrupa os horários disponíveis por dia
+  const byDate = slots.reduce((acc, s) => {
+    const key = new Date(s.date).toDateString();
+    (acc[key] = acc[key] || []).push(s);
+    return acc;
+  }, {});
+  const availableDates = Object.keys(byDate).map(k => new Date(k)).sort((a, b) => a - b);
+  const timesForDay = selectedDateKey ? (byDate[selectedDateKey] || []).sort((a, b) => a.startTime.localeCompare(b.startTime)) : [];
 
   const confirm = async () => {
-    if (!selectedDate || !selectedTime) return;
-    setL(true);
+    if (!selectedSlot) return;
+    setError("");
+    setBooking(true);
     try {
-      await schedulesAPI.create({ professionalId: professional.id, date: selectedDate.toISOString(), startTime: selectedTime, endTime: selectedTime });
+      await schedulesAPI.book(selectedSlot.id);
       onConfirm();
-    } catch (err) { alert(err.message); } finally { setL(false); }
+    } catch (err) {
+      // Ex.: 409 se outro cliente reservou entretanto — refrescar lista
+      setError(err.message || "Não foi possível reservar este horário.");
+      schedulesAPI.list(professional.id).then(d => setSlots(d.data || [])).catch(() => {});
+      setSelectedSlot(null);
+    } finally { setBooking(false); }
   };
 
   return (
@@ -2851,38 +3001,104 @@ const ScheduleScreen = ({ professional, onBack, onConfirm }) => {
         <h2 style={{ color: "#fff", fontSize: 20, fontWeight: 800, margin: 0 }}>Agendar Serviço</h2>
         <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, marginTop: 4 }}>{professional?.user?.name} • {professional?.specialty}</p>
       </div>
-      <div style={{ padding: "20px 16px" }}>
-        <Card style={{ marginBottom: 16 }}>
-          <h4 style={{ margin: "0 0 14px", color: C.dark, display: "flex", alignItems: "center", gap: 6 }}>
-            <Icon icon={faCalendarAlt} size={14} color={C.primary} /> Seleccionar data
-          </h4>
-          <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none" }}>
-            {days.map((d, i) => (
-              <div key={i} onClick={() => setSelectedDate(d)} style={{ minWidth: 52, textAlign: "center", padding: "10px 6px", borderRadius: 12, cursor: "pointer", background: selectedDate?.getDate() === d.getDate() ? C.primary : C.lightGray, color: selectedDate?.getDate() === d.getDate() ? "#fff" : C.dark, transition: "all 0.2s" }}>
-                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", opacity: 0.8 }}>{d.toLocaleDateString("pt", { weekday: "short" })}</div>
-                <div style={{ fontSize: 18, fontWeight: 800, marginTop: 2 }}>{d.getDate()}</div>
+      <div style={{ padding: "20px 16px", maxWidth: 560, margin: "0 auto" }}>
+        <ErrMsg msg={error} />
+        {loadingSlots ? <Spinner /> : availableDates.length === 0 ? (
+          <Card style={{ textAlign: "center", padding: 32 }}>
+            <Icon icon={faCalendarAlt} size={40} color={C.border} />
+            <p style={{ color: C.gray, marginTop: 12 }}>Este profissional ainda não definiu disponibilidade.</p>
+            <p style={{ color: C.gray, fontSize: 13 }}>Tente enviar uma mensagem para combinar directamente.</p>
+          </Card>
+        ) : (
+          <>
+            <Card style={{ marginBottom: 16 }}>
+              <h4 style={{ margin: "0 0 14px", color: C.dark, display: "flex", alignItems: "center", gap: 6 }}>
+                <Icon icon={faCalendarAlt} size={14} color={C.primary} /> Datas disponíveis
+              </h4>
+              <div className="schedule-dates-grid">
+                {availableDates.map((d, i) => {
+                  const key = d.toDateString();
+                  const isSel = selectedDateKey === key;
+                  return (
+                    <div key={i} onClick={() => { setSelectedDateKey(key); setSelectedSlot(null); }}
+                      style={{ textAlign: "center", padding: "10px 6px", borderRadius: 12, cursor: "pointer", background: isSel ? C.primary : C.lightGray, color: isSel ? "#fff" : C.dark, transition: "all 0.2s" }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", opacity: 0.8 }}>{d.toLocaleDateString("pt", { weekday: "short" })}</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, marginTop: 2 }}>{d.getDate()}</div>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-        </Card>
-        <Card style={{ marginBottom: 16 }}>
-          <h4 style={{ margin: "0 0 14px", color: C.dark, display: "flex", alignItems: "center", gap: 6 }}>
-            <Icon icon={faClock} size={14} color={C.primary} /> Horário
-          </h4>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
-            {times.map(t => (
-              <button key={t} onClick={() => setSelectedTime(t)} style={{ padding: "10px 4px", border: `1.5px solid ${selectedTime === t ? C.primary : C.border}`, borderRadius: 10, cursor: "pointer", background: selectedTime === t ? `${C.primary}10` : C.white, color: selectedTime === t ? C.primary : C.dark, fontWeight: 600, fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}>{t}</button>
-            ))}
-          </div>
-        </Card>
-        <Btn onClick={confirm} full variant="accent" disabled={!selectedDate || !selectedTime || loading}>
-          <Icon icon={faCheck} size={14} color="#fff" />
-          {loading ? "A agendar..." : selectedDate && selectedTime ? `Confirmar: ${selectedDate.getDate()} às ${selectedTime}` : "Seleccione data e hora"}
-        </Btn>
+            </Card>
+            {selectedDateKey && (
+              <Card style={{ marginBottom: 16 }}>
+                <h4 style={{ margin: "0 0 14px", color: C.dark, display: "flex", alignItems: "center", gap: 6 }}>
+                  <Icon icon={faClock} size={14} color={C.primary} /> Horários disponíveis
+                </h4>
+                {timesForDay.length === 0 ? (
+                  <p style={{ color: C.gray, fontSize: 13 }}>Sem horários livres neste dia.</p>
+                ) : (
+                  <div className="schedule-times-grid">
+                    {timesForDay.map(s => (
+                      <button key={s.id} onClick={() => setSelectedSlot(s)}
+                        style={{ padding: "10px 4px", border: `1.5px solid ${selectedSlot?.id === s.id ? C.primary : C.border}`, borderRadius: 10, cursor: "pointer", background: selectedSlot?.id === s.id ? `${C.primary}10` : C.white, color: selectedSlot?.id === s.id ? C.primary : C.dark, fontWeight: 600, fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}>
+                        {s.startTime}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            )}
+            <Btn onClick={confirm} full variant="accent" disabled={!selectedSlot || booking}>
+              <Icon icon={faCheck} size={14} color="#fff" />
+              {booking ? "A reservar..." : selectedSlot ? `Confirmar: ${new Date(selectedSlot.date).getDate()} às ${selectedSlot.startTime}` : "Seleccione data e hora"}
+            </Btn>
+          </>
+        )}
       </div>
+      <style>{`
+        .schedule-dates-grid, .schedule-times-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+          gap: 8px;
+        }
+        @media (min-width: 768px) {
+          .schedule-dates-grid, .schedule-times-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; }
+        }
+      `}</style>
     </div>
   );
 };
+
+const ResponsiveShell = () => (
+  <style>{`
+    .app-container { width: 100%; min-height: 100vh; background: ${C.lightGray}; }
+    @media (min-width: 768px) {
+      .app-container {  box-shadow: 0 0 40px rgba(0,0,0,0.06); min-height: 100vh; }
+      .categories-grid { grid-template-columns: repeat(4, 1fr) !important; }
+    }
+    @media (min-width: 1024px) {
+      .app-container {  }
+    }
+    @media (min-width: 1280px) {
+      .app-container { }
+    }
+    .categories-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 24px; }
+    .category-card { position: relative; border-radius: 14px; overflow: hidden; aspect-ratio: 1; cursor: pointer; }
+    .category-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .category-card .overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.55), transparent 60%); }
+    .category-card .label { position: absolute; bottom: 8px; left: 8px; right: 8px; color: #fff; font-weight: 700; font-size: 12px; }
+    .bottom-nav { position: fixed; bottom: 0; left: 50%; right: 0; display: flex; background: ${C.white}; border-top: 1px solid ${C.border}; padding: 8px 4px; z-index: 100; }
+    @media (min-width: 768px) {
+      .bottom-nav { left: 50%; transform: translateX(-50%); max-width: 100%; }
+    }
+    @media (min-width: 1024px) {
+      .bottom-nav { max-width: 100%;}
+    }
+    @media (min-width: 1280px) {
+      .bottom-nav { }
+    }
+  `}</style>
+);
 
 // ============================================================
 // APP PRINCIPAL
@@ -2892,11 +3108,15 @@ export default function BuildMatchApp() {
   const [user, setUser] = useState(null);
   const [clientTab, setClientTab] = useState("home");
   const [profTab, setProfTab] = useState("dashboard");
+  const [adminTab, setAdminTab] = useState("dashboard");
   const [selectedProf, setSelectedProf] = useState(null);
   const [searchQ, setSearchQ] = useState("");
   const [openChat, setOpenChat] = useState(null);
   const [scheduleFor, setScheduleFor] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
+  const [initialProfileSection, setInitialProfileSection] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [specialties, setSpecialties] = useState([]);
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -2906,12 +3126,23 @@ export default function BuildMatchApp() {
     const token = localStorage.getItem("buildmatch_token");
     const saved = localStorage.getItem("buildmatch_user");
     if (token && saved) { setUser(JSON.parse(saved)); setScreen("app"); }
+
+    // Carregar dados dinâmicos do backend (Categorias e Especialidades)
+    import("./services/api").then(({ professionalsAPI }) => {
+      professionalsAPI.getMeta()
+        .then(res => {
+          if (res.categories) setCategories(res.categories);
+          if (res.specialties) setSpecialties(res.specialties);
+        })
+        .catch(err => console.error("Erro ao obter especialidades/categorias do backend:", err));
+    });
   }, []);
 
   const login = (u) => { setUser(u); setScreen("app"); };
   const logout = () => { localStorage.clear(); setUser(null); setScreen("login"); };
   const success = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(null), 3001); };
   const isPro = user?.type === "PROFESSIONAL";
+  const isAdmin = user?.type === "ADMIN";
 
   // Abre uma conversa dentro do separador "Mensagens" (split-view), em vez de tomar o ecrã todo
   const goToChat = (conv) => {
@@ -2919,8 +3150,60 @@ export default function BuildMatchApp() {
     if (isPro) setProfTab("messages"); else setClientTab("messages");
   };
 
+  const handleNotificationAction = async (notif, action) => {
+    try {
+      const { projectsAPI } = await import("./services/api");
+      if (action === 'chat' && notif.projectId) {
+        const project = await projectsAPI.get(notif.projectId);
+        goToChat({
+          id: project.id,
+          title: project.title,
+          professional: project.professional,
+          client: project.client
+        });
+      } else if (action === 'accept' && notif.projectId) {
+        await projectsAPI.update(notif.projectId, { status: 'ACTIVE' });
+        success("Serviço aceite! O projecto está agora activo.");
+        const project = await projectsAPI.get(notif.projectId);
+        goToChat({
+          id: project.id,
+          title: project.title,
+          professional: project.professional,
+          client: project.client
+        });
+      }
+    } catch (err) {
+      alert("Erro ao processar acção da notificação: " + err.message);
+    }
+  };
+
+if (window.location.pathname === "/verificar-email") {
+  return <VerifyEmailScreen />;
+}
+
   if (screen === "onboarding") return <Onboarding onFinish={() => setScreen("login")} />;
   if (screen === "login") return <Login onLogin={login} />;
+
+  if (user && !user.emailVerified) {
+    return (
+      <EmailNotVerifiedScreen
+        user={user}
+        onLogout={logout}
+        onVerified={(verifiedUser) => {
+          setUser(verifiedUser);
+          setScreen("app");
+          if (verifiedUser.type === "PROFESSIONAL") {
+            setProfTab("profile");
+          } else if (verifiedUser.type === "CLIENT") {
+            setClientTab("profile");
+          } else if (verifiedUser.type === "ADMIN") {
+            setAdminTab("profile");
+          }
+          setInitialProfileSection("edit");
+        }}
+      />
+    );
+  }
 
   if (scheduleFor) return (
     <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: C.lightGray }}>
@@ -2952,6 +3235,28 @@ export default function BuildMatchApp() {
     </div>
   );
 
+  if (isAdmin) {
+    const renderAdmin = () => {
+      switch (adminTab) {
+        case "dashboard": return <AdminDashboard user={user} onLogout={logout} initialTab="overview" hideHeader={true} />;
+        case "users": return <AdminDashboard user={user} onLogout={logout} initialTab="users" hideHeader={true} />;
+        case "projects": return <AdminDashboard user={user} onLogout={logout} initialTab="projects" hideHeader={true} />;
+        case "reviews": return <AdminDashboard user={user} onLogout={logout} initialTab="reviews" hideHeader={true} />;
+        case "profile": return <AdminProfile user={user} onLogout={logout} onUpdate={(updated) => setUser(updated)} initialSection={initialProfileSection} onSectionChange={setInitialProfileSection} />;
+        default: return null;
+      }
+    };
+    return (
+      <div className="app-container">
+        <ResponsiveShell />
+        <AppHeader onLogout={logout} user={user} onNotificationAction={handleNotificationAction} />
+        <div style={{ paddingBottom: 80, overflowY: "auto" }}>{renderAdmin()}</div>
+        <AdminNav active={adminTab} onChange={setAdminTab} />
+        {successMsg && <SuccessModal message={successMsg} onClose={() => setSuccessMsg(null)} />}
+      </div>
+    );
+  }
+
   if (isPro) {
     const renderPro = () => {
       switch (profTab) {
@@ -2960,26 +3265,27 @@ export default function BuildMatchApp() {
         case "messages": return <MessagesLayout user={user} initialConv={openChat} onConsumeInitial={() => setOpenChat(null)} />;
         case "agenda": return <ProfAgenda user={user} />;
         case "portfolio": return <ProfPortfolio user={user} />;
-        case "home": return <ClientHome user={user} onProfSelect={setSelectedProf} onOpenChat={goToChat} onSearch={q => { setSearchQ(q); setClientTab("search"); }}/>;
+        case "home": return <ClientHome user={user} onProfSelect={setSelectedProf} onOpenChat={goToChat} onSearch={q => { setSearchQ(q); setClientTab("search"); }} categories={categories} />;
         
-        case "profile": return <ProfProfile user={user} onLogout={logout} />;
+        case "profile": return <ProfProfile user={user} onLogout={logout} onUpdate={(updated) => setUser(updated)} initialSection={initialProfileSection} onSectionChange={setInitialProfileSection} specialties={specialties} />;
         default: return null;
       }
     };
-  return (
-    <div className="app-container" style={{ maxWidth: "100%", margin: "0 auto" }}>
-      <AppHeader onLogout={logout} />
-      <div style={{ paddingBottom: profTab === "messages" ? 0 : 80, overflowY: profTab === "messages" ? "hidden" : "auto" }}>{renderPro()}</div>
-      <ProfNav active={profTab} onChange={setProfTab} />
-      {successMsg && <SuccessModal message={successMsg} onClose={() => setSuccessMsg(null)} />}
-    </div>
-  );
+    return (
+      <div className="app-container">
+        <ResponsiveShell />
+        <AppHeader onLogout={logout} user={user} onNotificationAction={handleNotificationAction} />
+        <div style={{ paddingBottom: profTab === "messages" ? 0 : 80, overflowY: profTab === "messages" ? "hidden" : "auto" }}>{renderPro()}</div>
+        <ProfNav active={profTab} onChange={setProfTab} />
+        {successMsg && <SuccessModal message={successMsg} onClose={() => setSuccessMsg(null)} />}
+      </div>
+    );
   }
 
   const renderClient = () => {
     switch (clientTab) {
-      case "profile": return <ClientProfile user={user} onLogout={logout} onUpdate={(updated) => setUser(updated)} />;
-      case "home": return <ClientHome user={user} onProfSelect={setSelectedProf} onSearch={q => { setSearchQ(q); setClientTab("search"); }} />;
+      case "profile": return <ClientProfile user={user} onLogout={logout} onUpdate={(updated) => setUser(updated)} initialSection={initialProfileSection} onSectionChange={setInitialProfileSection} />;
+      case "home": return <ClientHome user={user} onProfSelect={setSelectedProf} onSearch={q => { setSearchQ(q); setClientTab("search"); }} categories={categories} />;
       case "search": return <ClientSearch query={searchQ} onProfSelect={setSelectedProf} />;
       case "projects": return <ClientProjects />;
       case "messages": return <MessagesLayout user={user} initialConv={openChat} onConsumeInitial={() => setOpenChat(null)} />;
@@ -2988,11 +3294,308 @@ export default function BuildMatchApp() {
   };
 
   return (
-    <div className="app-container" style={{ maxWidth: "100%", margin: "0 auto" }}>
-      <AppHeader onLogout={logout} />
+    <div className="app-container">
+      <ResponsiveShell />
+      <AppHeader onLogout={logout} user={user} onNotificationAction={handleNotificationAction} />
       <div style={{ paddingBottom: clientTab === "messages" ? 0 : 80, overflowY: clientTab === "messages" ? "hidden" : "auto" }}>{renderClient()}</div>
       <ClientNav active={clientTab} onChange={tab => { setClientTab(tab); setSearchQ(""); }} />
       {successMsg && <SuccessModal message={successMsg} onClose={() => setSuccessMsg(null)} />}
     </div>
   );
 }
+const VerifyEmailScreen = () => {
+  const [status, setStatus] = useState("loading"); // loading | success | error
+  const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("token");
+    if (!token) {
+      setTimeout(() => {
+        setStatus("error");
+        setMsg("Link inválido.");
+      }, 0);
+      return;
+    }
+    fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/verify-email?token=${token}`)
+      .then(r => r.json().then(data => ({ ok: r.ok, data })))
+      .then(({ ok, data }) => { setStatus(ok ? "success" : "error"); setMsg(data.message || data.error); })
+      .catch(() => { setStatus("error"); setMsg("Erro ao confirmar email."); });
+  }, []);
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.lightGray, padding: 20, fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ background: "#fff", borderRadius: 20, padding: 32, textAlign: "center", maxWidth: 360 }}>
+        <Icon icon={status === "success" ? faCheckCircle : status === "error" ? faTimes : faClock} size={48}
+          color={status === "success" ? C.success : status === "error" ? C.error : C.gray} />
+        <p style={{ marginTop: 16, color: C.dark, fontWeight: 600 }}>{status === "loading" ? "A confirmar..." : msg}</p>
+        {status !== "loading" && (
+          <button onClick={() => { window.location.href = "/"; }}
+            style={{ marginTop: 16, background: C.primary, color: "#fff", border: "none", padding: "10px 24px", borderRadius: 10, cursor: "pointer", fontWeight: 700 }}>
+            Ir para a aplicação
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// BOTTOM NAV ADMINISTRADOR
+// ============================================================
+const AdminNav = ({ active, onChange }) => (
+  <div className="bottom-nav" style={{ background: "#14142b", borderTop: `2px solid ${C.accent}` }}>
+    {[
+      ["dashboard", faTachometerAlt, "Painel"],
+      ["users", faUsers, "Utilizadores"],
+      ["projects", faClipboardList, "Projectos"],
+      ["reviews", faStar, "Avaliações"],
+      ["profile", faShieldAlt, "Perfil"],
+    ].map(([id, icon, label]) => (
+      <button key={id} onClick={() => onChange(id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, background: "none", border: "none", cursor: "pointer", padding: "4px 0", minWidth: 0 }}>
+        <Icon icon={icon} size={18} color={active === id ? C.accent : "#9CA3AF"} />
+        <span style={{ fontSize: 9, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", color: active === id ? C.accent : "#9CA3AF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", paddingLeft: 2, paddingRight: 2 }}>{label}</span>
+        {active === id && <div style={{ width: 16, height: 3, borderRadius: 2, background: C.accent }} />}
+      </button>
+    ))}
+  </div>
+);
+
+// ============================================================
+// PERFIL DO ADMINISTRADOR
+// ============================================================
+const AdminProfile = ({ user, onLogout, onUpdate, initialSection, onSectionChange }) => {
+  const [section, setSection] = useState(initialSection || null);
+  const [successMsg, setSuccessMsg] = useState(null);
+
+  const showSuccess = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(null), 3001); };
+
+  useEffect(() => {
+    if (initialSection) {
+      setSection(initialSection);
+      if (onSectionChange) onSectionChange(null);
+    }
+  }, [initialSection]);
+
+  const BackBtn = () => (
+    <button onClick={() => setSection(null)} style={{ background: C.lightGray, border: "none", borderRadius: 10, padding: "8px 14px", cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif", color: C.dark, display: "flex", alignItems: "center", gap: 6 }}>
+      <Icon icon={faArrowLeft} size={13} color={C.dark} /> Voltar
+    </button>
+  );
+
+  const EditAdmin = () => {
+    const [name, setName] = useState(user?.name || "");
+    const [phone, setPhone] = useState(user?.phone || "");
+    const [saving, setSaving] = useState(false);
+
+    const save = async () => {
+      setSaving(true);
+      try {
+        const { usersAPI } = await import("./services/api");
+        const updated = await usersAPI.update(user.id, { name, phone });
+        const newUser = { ...user, ...updated };
+        localStorage.setItem("buildmatch_user", JSON.stringify(newUser));
+        onUpdate(newUser);
+        showSuccess("Perfil de Administrador actualizado!");
+        setSection(null);
+      } catch (err) { alert(err.message); }
+      finally { setSaving(false); }
+    };
+
+    return (
+      <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>
+          <BackBtn />
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: C.dark, margin: 0 }}>Editar Perfil</h2>
+        </div>
+        <Card style={{ marginBottom: 16 }}>
+          <Input label="Nome completo" value={name} onChange={e => setName(e.target.value)} placeholder="Seu nome" />
+          <Input label="Telefone" value={phone} onChange={e => setPhone(e.target.value)} type="tel" placeholder="+238 991 0000" />
+          <Btn onClick={save} full disabled={saving}>{saving ? "A guardar..." : "Guardar alterações"}</Btn>
+        </Card>
+      </div>
+    );
+  };
+
+  const ChangePassword = () => {
+    const [currentPass, setCurrentPass] = useState("");
+    const [newPass, setNewPass] = useState("");
+    const [confirmPass, setConfirmPass] = useState("");
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState("");
+
+    const save = async () => {
+      setError("");
+      if (!currentPass || !newPass || !confirmPass) { setError("Preencha todos os campos"); return; }
+      if (newPass !== confirmPass) { setError("As novas passwords não coincidem"); return; }
+      if (newPass.length < 8) { setError("Mínimo 8 caracteres"); return; }
+      setSaving(true);
+      try {
+        const { authAPI } = await import("./services/api");
+        await authAPI.changePassword({ currentPassword: currentPass, newPassword: newPass });
+        showSuccess("Password alterada com sucesso!");
+        setSection(null);
+      } catch (err) { setError(err.message); } finally { setSaving(false); }
+    };
+
+    return (
+      <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <BackBtn />
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: C.dark, margin: 0 }}>Segurança</h2>
+        </div>
+        <Card style={{ marginBottom: 16 }}>
+          <h4 style={{ margin: "0 0 16px", color: C.dark, fontSize: 15, display: "flex", alignItems: "center", gap: 6 }}>
+            <Icon icon={faLock} size={14} color={C.primary} /> Alterar palavra-passe
+          </h4>
+          {error && <ErrMsg msg={error} />}
+          <Input label="Password actual" value={currentPass} onChange={e => setCurrentPass(e.target.value)} type="password" placeholder="••••••••" />
+          <Input label="Nova password" value={newPass} onChange={e => setNewPass(e.target.value)} type="password" placeholder="••••••••" />
+          <Input label="Confirmar password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} type="password" placeholder="••••••••" />
+          <Btn onClick={save} full disabled={saving}>{saving ? "A alterar..." : "Alterar password"}</Btn>
+        </Card>
+      </div>
+    );
+  };
+
+  const Help = () => {
+    return (
+      <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <BackBtn />
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: C.dark, margin: 0 }}>Ajuda Admin</h2>
+        </div>
+        <Card style={{ marginTop: 20, background: `${C.primary}08`, border: `1px solid ${C.primary}20` }}>
+          <p style={{ margin: 0, fontSize: 13, color: C.primary, fontWeight: 600, marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+            <Icon icon={faShieldAlt} size={12} color={C.primary} /> Suporte de Sistema
+          </p>
+          <p style={{ margin: 0, fontSize: 13, color: C.gray }}>Acesso de administração do BuildMatch.</p>
+          <p style={{ margin: 0, fontSize: 13, color: C.gray }}>Contacto técnico: suporte.buildmatch@gmail.com</p>
+        </Card>
+      </div>
+    );
+  };
+
+  if (section === "edit") return <EditAdmin />;
+  if (section === "security") return <ChangePassword />;
+  if (section === "help") return <Help />;
+
+  return (
+    <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      {successMsg && <SuccessModal message={successMsg} onClose={() => setSuccessMsg(null)} />}
+      <div style={{ background: "#14142b", padding: "28px 16px 50px", textAlign: "center" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 32 }}>
+          <Avatar name={user?.name} color={C.accent} size={80} />
+        </div>
+        <h2 style={{ color: "#fff", fontSize: 20, fontWeight: 800, marginTop: 12, marginBottom: 4 }}>{user?.name}</h2>
+        <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, margin: 0 }}>{user?.email}</p>
+        <div style={{ background: "rgba(255,255,255,0.2)", display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 16px", borderRadius: 20, marginTop: 8 }}>
+          <Icon icon={faShieldAlt} size={12} color={C.accent} />
+          <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>Administrador</span>
+        </div>
+      </div>
+      <div style={{ padding: "0 16px", marginTop: -24 }}>
+        <Card style={{ marginBottom: 16, padding: 8 }}>
+          {[
+            { icon: faPencilAlt, label: "Editar perfil", desc: "Nome, telefone", key: "edit" },
+            { icon: faLock, label: "Segurança", desc: "Alterar palavra-passe", key: "security" },
+            { icon: faQuestionCircle, label: "Ajuda & Suporte", desc: "Contacto técnico", key: "help" },
+          ].map((item, i, arr) => (
+            <div key={item.key}>
+              <div onClick={() => setSection(item.key)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 10px", cursor: "pointer", borderRadius: 10 }}
+                onMouseEnter={e => e.currentTarget.style.background = C.lightGray}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+              >
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: `${C.primary}15`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Icon icon={item.icon} size={18} color={C.primary} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, color: C.dark, fontSize: 14 }}>{item.label}</div>
+                  <div style={{ color: C.gray, fontSize: 12, marginTop: 1 }}>{item.desc}</div>
+                </div>
+                <Icon icon={faChevronRight} size={13} color={C.gray} />
+              </div>
+              {i < arr.length - 1 && <div style={{ height: 1, background: C.border, marginLeft: 62 }} />}
+            </div>
+          ))}
+        </Card>
+        <p style={{ textAlign: "center", color: C.gray, fontSize: 12, marginBottom: 16 }}>BuildMatch Admin v1.0.0</p>
+        <button onClick={onLogout} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px", background: C.error, color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 14, fontFamily: "'DM Sans', sans-serif", marginBottom: 32 }}>
+          <Icon icon={faSignOutAlt} size={16} color="#fff" /> Terminar sessão
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// ECRÃ DE EMAIL NÃO CONFIRMADO
+// ============================================================
+const EmailNotVerifiedScreen = ({ user, onLogout, onVerified }) => {
+  const [checking, setChecking] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const checkStatus = async () => {
+    setChecking(true);
+    setMsg("");
+    try {
+      const refreshed = await authAPI.me();
+      if (refreshed.emailVerified) {
+        onVerified(refreshed);
+      } else {
+        setMsg("O seu email ainda não está confirmado. Verifique a sua caixa de entrada.");
+      }
+    } catch (err) {
+      setMsg("Erro ao verificar estado: " + err.message);
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const resendEmail = async () => {
+    setSending(true);
+    setMsg("");
+    try {
+      const res = await authAPI.resendVerification(user.email);
+      setMsg(res.message || "Link de confirmação enviado!");
+    } catch (err) {
+      setMsg("Erro ao reenviar: " + err.message);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.lightGray, padding: 20, fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ background: "#fff", borderRadius: 20, padding: 32, textAlign: "center", maxWidth: 380, boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
+        <div style={{ width: 64, height: 64, borderRadius: "50%", background: `${C.primary}15`, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+          <Icon icon={faEnvelope} size={28} color={C.primary} />
+        </div>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: C.dark, margin: "0 0 8px" }}>Confirme o seu email</h2>
+        <p style={{ color: C.gray, fontSize: 14, lineHeight: 1.5, margin: "0 0 16px" }}>
+          Para aceder ao BuildMatch, por favor confirme o seu endereço de email. Enviámos um link de verificação para:
+        </p>
+        <p style={{ fontWeight: 700, color: C.dark, fontSize: 15, margin: "0 0 24px", wordBreak: "break-all" }}>{user?.email}</p>
+        
+        {msg && <p style={{ color: C.primary, fontSize: 13, fontWeight: 600, background: `${C.primary}10`, padding: "10px 12px", borderRadius: 10, margin: "0 0 20px" }}>{msg}</p>}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <button onClick={checkStatus} disabled={checking}
+            style={{ width: "100%", background: C.primary, color: "#fff", border: "none", padding: "12px", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>
+            {checking ? "A verificar..." : "Já confirmei / Atualizar"}
+          </button>
+          
+          <button onClick={resendEmail} disabled={sending}
+            style={{ width: "100%", background: "none", border: `1.5px solid ${C.border}`, color: C.dark, padding: "11px", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>
+            {sending ? "A enviar..." : "Reenviar email de confirmação"}
+          </button>
+
+          <button onClick={onLogout}
+            style={{ width: "100%", background: "none", border: "none", color: C.error, padding: "10px", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "'DM Sans', sans-serif", marginTop: 10 }}>
+            Terminar sessão
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

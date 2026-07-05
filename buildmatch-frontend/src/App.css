@@ -153,7 +153,7 @@
 
     .bottom-nav {
     display: flex;
-    max-width: 960px;
+    max-width: 100%;
     position: fixed;
     bottom: 0;
     left: 50%;

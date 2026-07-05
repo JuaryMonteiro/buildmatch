@@ -49,7 +49,7 @@ body {
 /* ── Container principal ── */
 .app-container {
   width: 100%;
-  max-width: 480px;
+  max-width: 100%;
   margin: 0 auto;
   min-height: 100vh;
   background: #F5F5F5;
@@ -334,14 +334,14 @@ body {
 /* Tablet e Desktop: aumenta o container */
 @media (min-width: 768px) {
   .app-container {
-    max-width: 720px;
+    max-width: 100%;
     box-shadow: 0 0 40px rgba(0,0,0,0.10);
   }
 }
 
 @media (min-width: 1024px) {
   .app-container {
-    max-width: 960px;
+    max-width: 100%;
   }
 
   /* Desktop: layout lateral */
@@ -370,7 +370,7 @@ body {
   .desktop-content {
     margin-left: 240px;
     flex: 1;
-    max-width: 720px;
+    max-width: 100%;
   }
 }
 
@@ -381,7 +381,7 @@ body {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 480px;
+  max-width: 100%;
   background: #fff;
   border-top: 1px solid #E5E7EB;
   display: flex;
@@ -527,7 +527,7 @@ body {
 
 @media (min-width: 768px) {
   .bottom-nav {
-    max-width: 720px;
+    max-width: 100%;
   }
   .categories-grid {
     grid-template-columns: repeat(4, 1fr);
