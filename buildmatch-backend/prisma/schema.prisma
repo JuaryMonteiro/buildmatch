@@ -158,15 +158,29 @@ model Address {
   user User @relation(fields: [userId], references: [id])
 }
 
+model Alert {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  level     String   // info, warning, error
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String   // e.g., "PORTFOLIO_APPROVED"
+  userId    String?
+  details   Json?
+  createdAt DateTime @default(now())
+}
+
 model Notificacao {
   id       Int    @id @default(autoincrement())
   titulo   String
   mensagem String
   type     String
   status   String
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
   data_criacao DateTime @default(now())
 }

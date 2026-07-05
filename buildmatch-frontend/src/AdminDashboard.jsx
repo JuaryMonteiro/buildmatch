@@ -5,8 +5,23 @@ import {
   faStar, faMoneyBillWave, faSignOutAlt, faSearch, faTimes,
   faCheck, faBan, faTrash, faChevronLeft, faChevronRight,
   faExclamationTriangle, faShieldAlt, faEnvelopeCircleCheck,
-  faGauge, faHardHat, faClock,
+  faGauge, faHardHat, faClock, faBell,
 } from "@fortawesome/free-solid-svg-icons";
+
+// -------------------------------------------------------------------
+// Admin panel tabs configuration
+// -------------------------------------------------------------------
+const TABS = [
+  { id: "overview", label: "Visão geral", icon: faGauge },
+  { id: "users", label: "Utilizadores", icon: faUsers },
+  { id: "projects", label: "Projectos", icon: faClipboardList },
+  { id: "reviews", label: "Avaliações", icon: faStar },
+  { id: "portfolios", label: "Portfolios", icon: faHardHat },
+  { id: "comments", label: "Comentários", icon: faEnvelopeCircleCheck },
+  { id: "lowRatings", label: "Baixas Avaliações", icon: faExclamationTriangle },
+  { id: "alerts", label: "Alertas", icon: faBell },
+  { id: "audit", label: "Auditoria", icon: faShieldAlt },
+];
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -27,19 +42,7 @@ const adminFetch = async (path, opts = {}) => {
 };
 
 // ── Paleta partilhada com o resto da app ────────────────────────────────
-const C = {
-  primary: "var(--color-primary)",
-  primaryDark: "var(--color-primary-dark)",
-  accent: "var(--color-accent)",
-  dark: "var(--color-dark)",
-  gray: "var(--color-gray)",
-  lightGray: "var(--color-light-gray)",
-  white: "var(--color-white)",
-  success: "var(--color-success)",
-  error: "var(--color-error)",
-  border: "var(--color-border)",
-  purple: "var(--color-purple)",
-};
+
 
 const Icon = ({ icon, size = 16, color, style: ex }) => (
   <FontAwesomeIcon icon={icon} style={{ fontSize: size, color: color || "currentColor", ...ex }} />
@@ -407,26 +410,75 @@ const ReviewsPanel = () => {
   );
 };
 
+// -------------------------------------------------------------------
+// Cores partilhadas
+// -------------------------------------------------------------------
+const C = {
+  primary: "var(--color-primary)",
+  primaryDark: "var(--color-primary-dark)",
+  accent: "var(--color-accent)",
+  dark: "var(--color-dark)",
+  gray: "var(--color-gray)",
+  lightGray: "var(--color-light-gray)",
+  white: "var(--color-white)",
+  success: "var(--color-success)",
+  error: "var(--color-error)",
+  border: "var(--color-border)",
+  purple: "var(--color-purple)",
+};
+
+// ---------------------------------------------------------------
+// PLACE‑HOLDERS DOS NOVOS PAINÉIS (a substituir por código real)
+// ---------------------------------------------------------------
+const PortfoliosPanel = () => (
+  <div>
+    <p style={{ color: C.gray, textAlign: "center", padding: 32 }}>
+      Gestão de Portfolios (a implementar)
+    </p>
+  </div>
+);
+
+const CommentsPanel = () => (
+  <div>
+    <p style={{ color: C.gray, textAlign: "center", padding: 32 }}>
+      Moderação de Comentários (a implementar)
+    </p>
+  </div>
+);
+
+const LowRatingsPanel = () => (
+  <div>
+    <p style={{ color: C.gray, textAlign: "center", padding: 32 }}>
+      Profissionais com baixa classificação (a implementar)
+    </p>
+  </div>
+);
+
+const AlertsPanel = () => (
+  <div>
+    <p style={{ color: C.gray, textAlign: "center", padding: 32 }}>
+      Alertas do sistema (a implementar)
+    </p>
+  </div>
+);
+
+const AuditPanel = () => (
+  <div>
+    <p style={{ color: C.gray, textAlign: "center", padding: 32 }}>
+      Registo de auditoria (a implementar)
+    </p>
+  </div>
+);
 // ============================================================
 // PAINEL PRINCIPAL
 // ============================================================
-const TABS = [
-  { id: "overview", label: "Visão geral", icon: faGauge },
-  { id: "users", label: "Utilizadores", icon: faUsers },
-  { id: "projects", label: "Projectos", icon: faClipboardList },
-  { id: "reviews", label: "Avaliações", icon: faStar },
-];
 
-export default function AdminDashboard({ onLogout, initialTab = "overview", hideHeader = false }) {
-  const [tab, setTab] = useState(initialTab);
+const initialTab = TABS[0].id;
+const [tab, setTab] = useState(initialTab);
 
-  useEffect(() => {
-    setTab(initialTab);
-  }, [initialTab]);
-
-  return (
-    <div className="admin-shell">
-      <style>{`
+return (
+  <div className="admin-shell">
+    <style>{`
         .admin-shell { font-family: 'DM Sans', sans-serif; min-height: 100vh; background: ${C.lightGray}; }
         .admin-topbar {
           background: #14142b; color: #fff; padding: 16px 20px; display: flex;
@@ -478,34 +530,38 @@ export default function AdminDashboard({ onLogout, initialTab = "overview", hide
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
-      {!hideHeader && (
-        <div className="admin-topbar">
-          <div className="admin-topbar-title">
-            <Icon icon={faShieldAlt} size={20} color={C.accent} />
-            <span className="full-title">Painel de Administração</span>
-          </div>
-          <button className="admin-logout-btn" onClick={onLogout}>
-            <Icon icon={faSignOutAlt} size={13} /> Sair
-          </button>
+    {!hideHeader && (
+      <div className="admin-topbar">
+        <div className="admin-topbar-title">
+          <Icon icon={faShieldAlt} size={20} color={C.accent} />
+          <span className="full-title">Painel de Administração</span>
         </div>
-      )}
-
-      {!hideHeader && (
-        <div className="admin-tabs">
-          {TABS.map(t => (
-            <button key={t.id} className={`admin-tab-btn ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>
-              <Icon icon={t.icon} size={14} /> {t.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="admin-body" style={{ padding: hideHeader ? "16px 12px 60px" : undefined }}>
-        {tab === "overview" && <Overview />}
-        {tab === "users" && <UsersPanel />}
-        {tab === "projects" && <ProjectsPanel />}
-        {tab === "reviews" && <ReviewsPanel />}
+        <button className="admin-logout-btn" onClick={onLogout}>
+          <Icon icon={faSignOutAlt} size={13} /> Sair
+        </button>
       </div>
+    )}
+
+    {!hideHeader && (
+      <div className="admin-tabs">
+        {TABS.map(t => (
+          <button key={t.id} className={`admin-tab-btn ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>
+            <Icon icon={t.icon} size={14} /> {t.label}
+          </button>
+        ))}
+      </div>
+    )}
+
+    <div className="admin-body" style={{ padding: hideHeader ? "16px 12px 60px" : undefined }}>
+      {tab === "overview" && <Overview />}
+      {tab === "users" && <UsersPanel />}
+      {tab === "projects" && <ProjectsPanel />}
+      {tab === "reviews" && <ReviewsPanel />}
+      {tab === "portfolios" && <PortfoliosPanel />}
+      {tab === "comments" && <CommentsPanel />}
+      {tab === "lowRatings" && <LowRatingsPanel />}
+      {tab === "alerts" && <AlertsPanel />}
+      {tab === "audit" && <AuditPanel />}
     </div>
-  );
-}
+  </div>
+);

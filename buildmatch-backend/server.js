@@ -38,6 +38,7 @@ app.use('/api/reviews',       require('./src/routes/reviews'));
 app.use('/api/portfolio',     require('./src/routes/portfolio'));
 app.use('/api/addresses',      require('./src/routes/addresses'));
 app.use('/api/notifications',  require('./src/routes/notifications'));
+app.use('/api/admin', require('./src/routes/admin'));
 
 
 // ── Socket.IO — Chat em tempo real ────────────────
