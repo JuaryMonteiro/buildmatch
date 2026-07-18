@@ -1,5 +1,8 @@
+// Prisma schema for BuildMatch backend
+
 datasource db {
   provider = "postgresql"
+  // Note: Connection URL is configured in prisma.config.ts for Prisma 7 compatibility
 }
 
 generator client {
@@ -9,6 +12,7 @@ generator client {
 // ── Enums ──────────────────────────────────────────
 
 enum UserType {
+  ADMIN
   CLIENT
   PROFESSIONAL
 }
@@ -20,32 +24,79 @@ enum ProjectStatus {
   CANCELLED
 }
 
-// ── Modelos ────────────────────────────────────────
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REJECTED
+  REFUNDED
+}
+
+enum ProposalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COUNTERED
+  WITHDRAWN
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  TERMINATED
+}
+
+enum MilestoneStatus {
+  PENDING
+  RELEASED
+  PAID
+  CANCELED
+}
+
+enum DisputeStatus {
+  OPEN
+  RESOLVED
+  REJECTED
+}
+
+// ── Models ────────────────────────────────────────
 
 model User {
-  id        String    @id @default(uuid())
-  name      String
-  email     String    @unique
-  password  String
-  type      UserType
-  avatar    String?
-  phone     String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  addresses Address[]
+  id                       String        @id @default(uuid())
+  name                     String
+  email                    String        @unique
+  password                 String
+  type                     UserType
+  avatar                   String?
+  phone                    String?
+  active                   Boolean       @default(true)
+  emailVerified            Boolean       @default(false)
+  verificationToken        String?       @unique
+  verificationTokenExpires DateTime?
+  resetPasswordToken       String?       @unique
+  resetPasswordTokenExpires DateTime?
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
 
-  professional   Professional?
-  projectsClient Project[]     @relation("ClientProjects")
-  reviewsGiven   Review[]      @relation("ReviewsGiven")
-  messagesSent   Message[]     @relation("MessagesSent")
-  notificacoes   Notificacao[]
+  addresses                Address[]
+  professional             Professional?
+  projectsClient           Project[]     @relation("ClientProjects")
+  reviewsGiven             Review[]      @relation("ReviewsGiven")
+  clientReviewsReceived    ClientReview[] @relation("ClientReviewsReceived")
+  clientReviewsGiven       ClientReview[] @relation("ClientReviewsGiven")
+  messagesSent             Message[]     @relation("MessagesSent")
+  notificacoes             Notificacao[]
+  proposals                Proposal[]
+  payments                 Payment[]
+  disputesRaised           Dispute[]     @relation("UserDisputesRaised")
 }
 
 model Professional {
   id          String   @id @default(uuid())
   userId      String   @unique
   specialty   String
-  experience  Int // anos de experiência
+  experience  Int
   location    String
   latitude    Float?
   longitude   Float?
@@ -53,10 +104,11 @@ model Professional {
   city        String?
   island      String?
   postalCode  String?
-  radius      Float // raio de atendimento em km
+  radius      Float    // km of service area
   rating      Float    @default(0)
   reviewCount Int      @default(0)
   verified    Boolean  @default(false)
+  verificationDoc String?
   available   Boolean  @default(true)
   priceMin    Float?
   priceMax    Float?
@@ -65,46 +117,69 @@ model Professional {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user      User        @relation(fields: [userId], references: [id])
-  portfolio Portfolio[]
-  projects  Project[]
-  reviews   Review[]
-  schedules Schedule[]
+  user        User     @relation(fields: [userId], references: [id])
+  portfolio   Portfolio[]
+  projects    Project[]
+  reviews     Review[]
+  schedules   Schedule[]
+  proposals   Proposal[]
 }
 
 model Project {
-  id             String        @id @default(uuid())
-  title          String
-  description    String?
-  status         ProjectStatus @default(PENDING)
-  clientId       String
-  professionalId String
-  amount         Float?
-  startDate      DateTime?
-  endDate        DateTime?
-  address        String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id               String        @id @default(uuid())
+  title            String
+  description      String?
+  status           ProjectStatus @default(PENDING)
+  clientId         String
+  professionalId   String
+  budgetAmount     Float?
+  budgetDeadline   DateTime?
+  portfolioItemId  String?
+  amount           Float?
+  startDate        DateTime?
+  endDate          DateTime?
+  address          String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
-  client       User         @relation("ClientProjects", fields: [clientId], references: [id])
-  professional Professional @relation(fields: [professionalId], references: [id])
-  messages     Message[]
-  review       Review?
+  client           User          @relation("ClientProjects", fields: [clientId], references: [id])
+  professional     Professional  @relation(fields: [professionalId], references: [id])
+  messages         Message[]
+  review           Review?
+  clientReview     ClientReview?
+  proposals        Proposal[]
+  payments         Payment[]
+  portfolioItem    Portfolio?    @relation("PortfolioProjects", fields: [portfolioItemId], references: [id])
 }
 
 model Review {
-  id             String   @id @default(uuid())
-  rating         Int // 1 a 5
+  id             String       @id @default(uuid())
+  rating         Int          // 1 to 5
   comment        String
-  reply          String? // resposta do profissional
+  reply          String?      // response from professional
   authorId       String
   professionalId String
+  projectId      String       @unique
+  createdAt      DateTime     @default(now())
+
+  author         User         @relation("ReviewsGiven", fields: [authorId], references: [id])
+  professional   Professional @relation(fields: [professionalId], references: [id])
+  project        Project      @relation(fields: [projectId], references: [id])
+}
+
+model ClientReview {
+  id             String   @id @default(uuid())
+  rating         Int      // 1 to 5
+  comment        String
+  reply          String?  // client's response
+  clientId       String
+  authorId       String
   projectId      String   @unique
   createdAt      DateTime @default(now())
 
-  author       User         @relation("ReviewsGiven", fields: [authorId], references: [id])
-  professional Professional @relation(fields: [professionalId], references: [id])
-  project      Project      @relation(fields: [projectId], references: [id])
+  client         User     @relation("ClientReviewsReceived", fields: [clientId], references: [id])
+  author         User     @relation("ClientReviewsGiven", fields: [authorId], references: [id])
+  project        Project  @relation(fields: [projectId], references: [id])
 }
 
 model Message {
@@ -112,13 +187,13 @@ model Message {
   content   String
   senderId  String
   projectId String
-  mediaUrl  String?
-  mediaType String? // image | video | document
+  mediaUrl  String?  // Can store base64 image data or normal path
+  mediaType String?  // image | video | document
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  sender  User    @relation("MessagesSent", fields: [senderId], references: [id])
-  project Project @relation(fields: [projectId], references: [id])
+  sender   User    @relation("MessagesSent", fields: [senderId], references: [id])
+  project  Project @relation(fields: [projectId], references: [id])
 }
 
 model Schedule {
@@ -138,37 +213,43 @@ model Portfolio {
   professionalId String
   title          String
   description    String?
-  imageUrls      Json     @default("[]")
+  imageUrls      Json     @default("[]") // Holds base64 images
   videoUrl       String?
   category       String?
   featured       Boolean  @default(false)
   createdAt      DateTime @default(now())
+  price          Float?
+  estimatedDuration Int? // days to complete
 
   professional Professional @relation(fields: [professionalId], references: [id])
+  projects    Project[]   @relation("PortfolioProjects")
 }
 
 model Address {
-  id        String   @id @default(uuid())
+  id        String @id @default(uuid())
   userId    String
   label     String
   address   String
-  default   Boolean  @default(false)
+  default   Boolean @default(false)
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
 }
 
 model Alert {
-  id        String   @id @default(uuid())
+  id        String @id @default(uuid())
   title     String
   message   String
-  level     String   // info, warning, error
+  level     String // info, warning, error
+  resolved  Boolean @default(false)
+  resolvedAt DateTime?
+  resolvedBy String? // admin user id
   createdAt DateTime @default(now())
 }
 
 model AuditLog {
-  id        String   @id @default(uuid())
-  action    String   // e.g., "PORTFOLIO_APPROVED"
+  id        String @id @default(uuid())
+  action    String // e.g., "PORTFOLIO_APPROVED"
   userId    String?
   details   Json?
   createdAt DateTime @default(now())
@@ -181,6 +262,87 @@ model Notificacao {
   type     String
   status   String
   userId   String
-  user     User   @relation(fields: [userId], references: [id])
   data_criacao DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Payment {
+  id               String   @id @default(uuid())
+  projectId        String
+  clientId         String
+  milestoneId      String?
+  amount           Float
+  currency         String   @default("$00")
+  status           PaymentStatus @default(PENDING)
+  proof            String?  // Base64 string of receipt/comprovativo
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id])
+  client  User    @relation(fields: [clientId], references: [id])
+  milestone Milestone? @relation(fields: [milestoneId], references: [id])
+}
+
+model Proposal {
+  id               String   @id @default(uuid())
+  projectId        String
+  professionalId   String
+  clientId         String
+  proposedAmount   Float
+  proposedDeadline DateTime?
+  coverLetter      String?
+  status           ProposalStatus @default(PENDING)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  project      Project     @relation(fields: [projectId], references: [id])
+  professional Professional @relation(fields: [professionalId], references: [id])
+  client       User        @relation(fields: [clientId], references: [id])
+  contract     Contract?
+}
+
+model Contract {
+  id          String   @id @default(uuid())
+  proposalId  String   @unique
+  signedAt    DateTime?
+  terms       Json?
+  status      ContractStatus @default(DRAFT)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  proposal   Proposal @relation(fields: [proposalId], references: [id])
+  milestones Milestone[]
+  disputes   Dispute[]
+}
+
+model Milestone {
+  id          String   @id @default(uuid())
+  contractId  String
+  title       String
+  amount      Float
+  dueDate     DateTime?
+  status      MilestoneStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  contract Contract @relation(fields: [contractId], references: [id])
+  disputes Dispute[]
+  payments Payment[]
+}
+
+model Dispute {
+  id           String   @id @default(uuid())
+  contractId   String?
+  milestoneId  String?
+  raisedById   String
+  description  String
+  status       DisputeStatus @default(OPEN)
+  createdAt    DateTime @default(now())
+  resolvedAt   DateTime?
+  resolution   String?
+
+  contract  Contract?  @relation(fields: [contractId], references: [id])
+  milestone Milestone? @relation(fields: [milestoneId], references: [id])
+  raisedBy  User       @relation("UserDisputesRaised", fields: [raisedById], references: [id])
 }

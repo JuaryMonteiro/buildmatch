@@ -331,6 +331,9 @@ body {
 .notif-action-btn.delete:hover {
   color: #ff4757;
 }
+
+
+
 /* Tablet e Desktop: aumenta o container */
 @media (min-width: 768px) {
   .app-container {
@@ -574,5 +577,137 @@ body {
   }
     .pinterest-grid {
     gap: 16px;
+  }
+}
+
+/* ── Estilos do Footer (Premium) ── */
+.app-footer {
+  background: #14142b;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 40px 24px 30px;
+  font-family: 'DM Sans', sans-serif;
+  border-top: 2px solid var(--color-accent);
+  margin-top: 40px;
+}
+
+.footer-content {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .footer-content {
+    grid-template-columns: 2fr 1fr 1fr;
+  }
+}
+
+.footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer-logo {
+  height: 36px;
+  width: auto;
+  align-self: flex-start;
+  object-fit: contain;
+}
+
+.footer-tagline {
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.5);
+  max-width: 280px;
+}
+
+.footer-col h4 {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.footer-col a {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  text-decoration: none;
+  transition: color 0.2s, padding-left 0.2s;
+}
+
+.footer-col a:hover {
+  color: var(--color-accent);
+  padding-left: 4px;
+}
+
+.footer-bottom {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* ── Sidebar do Administrador (Sidebar Layout) ── */
+.admin-layout-container {
+  display: flex;
+  min-height: 100vh;
+  background: var(--color-light-gray);
+}
+
+.admin-sidebar {
+  width: 70px;
+  background: #14142b;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 8px;
+  border-right: 2px solid var(--color-accent);
+  flex-shrink: 0;
+  box-sizing: border-box;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.admin-sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-sidebar-logo-text {
+  display: none;
+}
+
+.admin-sidebar button span {
+  display: none;
+}
+
+.admin-sidebar button {
+  justify-content: center;
+  padding: 12px 0 !important;
+}
+
+@media (min-width: 768px) {
+  .admin-sidebar {
+    width: 260px;
+    padding: 24px 16px;
+  }
+  
+  .admin-sidebar-logo-text {
+    display: inline;
+  }
+  
+  .admin-sidebar button span {
+    display: inline;
+  }
+  
+  .admin-sidebar button {
+    justify-content: flex-start;
+    padding: 12px 14px !important;
   }
 }

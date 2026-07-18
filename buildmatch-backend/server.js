@@ -14,6 +14,23 @@ const io     = new Server(server, {
   },
 });
 
+// ── Mapa userId → socketId para notificações em tempo real ────────────
+const userSocketMap = new Map(); // userId → Set<socketId>
+
+// Expor io e helper globalmente para uso nas rotas
+app.set('io', io);
+app.set('userSocketMap', userSocketMap);
+
+// Helper: emitir notificação em tempo real a um utilizador
+app.set('emitNotification', (userId, notification) => {
+  const sockets = userSocketMap.get(userId);
+  if (sockets) {
+    sockets.forEach(socketId => {
+      io.to(socketId).emit('new_notification', notification);
+    });
+  }
+});
+
 // ── Middlewares ────────────────────────────────────
 app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173' }));
 app.use(express.json({ limit: '50mb' }));
@@ -39,11 +56,25 @@ app.use('/api/portfolio',     require('./src/routes/portfolio'));
 app.use('/api/addresses',      require('./src/routes/addresses'));
 app.use('/api/notifications',  require('./src/routes/notifications'));
 app.use('/api/admin', require('./src/routes/admin'));
+app.use('/api/proposals',     require('./src/routes/proposals'));
+app.use('/api/contracts',     require('./src/routes/contracts'));
+app.use('/api/milestones',    require('./src/routes/milestones'));
+app.use('/api/payments',      require('./src/routes/payments'));
+app.use('/api/disputes',      require('./src/routes/disputes'));
 
 
-// ── Socket.IO — Chat em tempo real ────────────────
+// ── Socket.IO — Chat em tempo real + Notificações ──────────────────
 io.on('connection', (socket) => {
   console.log('Utilizador conectado:', socket.id);
+
+  // Associar socket ao utilizador autenticado
+  socket.on('authenticate', (userId) => {
+    if (userId) {
+      if (!userSocketMap.has(userId)) userSocketMap.set(userId, new Set());
+      userSocketMap.get(userId).add(socket.id);
+      console.log(`Socket ${socket.id} associado ao utilizador ${userId}`);
+    }
+  });
 
   socket.on('join_room', (projectId) => {
     socket.join(projectId);
@@ -59,16 +90,26 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('Utilizador desconectado:', socket.id);
+    // Remover socket do mapa de utilizadores
+    userSocketMap.forEach((sockets, userId) => {
+      sockets.delete(socket.id);
+      if (sockets.size === 0) userSocketMap.delete(userId);
+    });
   });
 });
 
 // ── Iniciar servidor ───────────────────────────────
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
-  console.log(`🚀 BuildMatch API a correr em http://localhost:${PORT}`);
-  console.log(`📊 Prisma Studio: npx prisma studio`);
-});
+if (require.main === module) {
+  const PORT = process.env.PORT || 3001;
+  server.listen(PORT, () => {
+    console.log(`🚀 BuildMatch API a correr em http://localhost:${PORT}`);
+    console.log(`📊 Prisma Studio: npx prisma studio`);
+  });
+}
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok", message: "BuildMatch backend ativo!" });
 });
+
+module.exports = { app, server };
+

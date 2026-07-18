@@ -5,7 +5,7 @@ import {
   faStar, faMoneyBillWave, faSignOutAlt, faSearch, faTimes,
   faCheck, faBan, faTrash, faChevronLeft, faChevronRight,
   faExclamationTriangle, faShieldAlt, faEnvelopeCircleCheck,
-  faGauge, faHardHat, faClock, faBell,
+  faGauge, faHardHat, faClock, faBell, faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 
 // -------------------------------------------------------------------
@@ -18,12 +18,30 @@ const TABS = [
   { id: "reviews", label: "Avaliações", icon: faStar },
   { id: "portfolios", label: "Portfolios", icon: faHardHat },
   { id: "comments", label: "Comentários", icon: faEnvelopeCircleCheck },
-  { id: "lowRatings", label: "Baixas Avaliações", icon: faExclamationTriangle },
+  { id: "lowRatings", label: "Avaliação", icon: faExclamationTriangle },
+  { id: "verifications", label: "Verificações", icon: faShieldAlt },
   { id: "alerts", label: "Alertas", icon: faBell },
   { id: "audit", label: "Auditoria", icon: faShieldAlt },
 ];
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
+
+// -------------------------------------------------------------------
+// Cores partilhadas
+// -------------------------------------------------------------------
+const C = {
+  primary: "var(--color-primary)",
+  primaryDark: "var(--color-primary-dark)",
+  accent: "var(--color-accent)",
+  dark: "var(--color-dark)",
+  gray: "var(--color-gray)",
+  lightGray: "var(--color-light-gray)",
+  white: "var(--color-white)",
+  success: "var(--color-success)",
+  error: "var(--color-error)",
+  border: "var(--color-border)",
+  purple: "var(--color-purple)",
+};
 
 // ── Cliente HTTP simples e isolado (não depende de services/api.js) ────
 const adminFetch = async (path, opts = {}) => {
@@ -41,8 +59,7 @@ const adminFetch = async (path, opts = {}) => {
   return data;
 };
 
-// ── Paleta partilhada com o resto da app ────────────────────────────────
-
+// ── Componentes utilitários ────────────────────────────────────────────
 
 const Icon = ({ icon, size = 16, color, style: ex }) => (
   <FontAwesomeIcon icon={icon} style={{ fontSize: size, color: color || "currentColor", ...ex }} />
@@ -154,6 +171,15 @@ const UsersPanel = () => {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [confirmAction, setConfirmAction] = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
+  // Formulário de criação
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [newType, setNewType] = useState("CLIENT");
+  const [newSpecialty, setNewSpecialty] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
 
   const load = useCallback(() => {
     setL(true);
@@ -181,6 +207,20 @@ const UsersPanel = () => {
     } catch (e) { alert(e.message); }
   };
 
+  const createUser = async () => {
+    if (!newName || !newEmail || !newPass) { setCreateError("Nome, email e password são obrigatórios"); return; }
+    setCreating(true); setCreateError("");
+    try {
+      const created = await adminFetch("/users", {
+        method: "POST",
+        body: JSON.stringify({ name: newName, email: newEmail, password: newPass, type: newType, specialty: newSpecialty }),
+      });
+      setUsers(prev => [created, ...prev]);
+      setShowCreate(false);
+      setNewName(""); setNewEmail(""); setNewPass(""); setNewType("CLIENT"); setNewSpecialty("");
+    } catch (e) { setCreateError(e.message); } finally { setCreating(false); }
+  };
+
   return (
     <div>
       <div className="admin-toolbar">
@@ -195,6 +235,18 @@ const UsersPanel = () => {
           <option value="PROFESSIONAL">Profissionais</option>
           <option value="ADMIN">Administradores</option>
         </select>
+        <button
+          id="admin-create-user-btn"
+          onClick={() => setShowCreate(true)}
+          style={{
+            background: C.primary, color: "#fff", border: "none",
+            padding: "8px 14px", borderRadius: 8, cursor: "pointer",
+            fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif",
+            display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
+          }}
+        >
+          <Icon icon={faPlus} size={12} color="#fff" /> Novo utilizador
+        </button>
       </div>
 
       {error && <p style={{ color: C.error }}>{error}</p>}
@@ -262,6 +314,70 @@ const UsersPanel = () => {
           onConfirm={() => remove(confirmAction.id)}
         />
       )}
+
+      {/* Modal de criação de utilizador */}
+      {showCreate && (
+        <div onClick={() => setShowCreate(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, padding: 28, width: "100%", maxWidth: 460, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={{ margin: 0, fontWeight: 800, color: C.dark, display: "flex", alignItems: "center", gap: 8 }}>
+                <Icon icon={faPlus} size={16} color={C.primary} /> Novo Utilizador
+              </h3>
+              <button onClick={() => setShowCreate(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: C.gray }}>×</button>
+            </div>
+
+            {createError && <p style={{ color: C.error, fontSize: 13, margin: "0 0 12px", padding: "8px 12px", background: "#FEE2E2", borderRadius: 8 }}>{createError}</p>}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: C.dark, display: "block", marginBottom: 4 }}>Nome completo *</label>
+                <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nome do utilizador"
+                  style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: C.dark, display: "block", marginBottom: 4 }}>Email *</label>
+                <input value={newEmail} onChange={e => setNewEmail(e.target.value)} type="email" placeholder="email@exemplo.com"
+                  style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: C.dark, display: "block", marginBottom: 4 }}>Password *</label>
+                <input value={newPass} onChange={e => setNewPass(e.target.value)} type="password" placeholder="Mínimo 6 caracteres"
+                  style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: C.dark, display: "block", marginBottom: 4 }}>Tipo de conta *</label>
+                <select value={newType} onChange={e => setNewType(e.target.value)}
+                  style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontFamily: "'DM Sans', sans-serif", outline: "none", background: "#fff", color: C.dark }}>
+                  <option value="CLIENT">Cliente</option>
+                  <option value="PROFESSIONAL">Profissional</option>
+                  <option value="ADMIN">Administrador</option>
+                </select>
+              </div>
+              {newType === "PROFESSIONAL" && (
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: C.dark, display: "block", marginBottom: 4 }}>Especialidade</label>
+                  <input value={newSpecialty} onChange={e => setNewSpecialty(e.target.value)} placeholder="Ex: Pedreiro, Electricista..."
+                    style={{ width: "100%", padding: "10px 12px", border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }} />
+                </div>
+              )}
+              <p style={{ fontSize: 11, color: C.gray, margin: 0 }}>
+                ℹ️ O utilizador será criado com email já verificado e conta activa.
+              </p>
+            </div>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <button onClick={() => setShowCreate(false)}
+                style={{ flex: 1, padding: "11px", border: `1px solid ${C.border}`, borderRadius: 12, background: "transparent", cursor: "pointer", fontSize: 14, fontWeight: 600, color: C.gray, fontFamily: "'DM Sans', sans-serif" }}>
+                Cancelar
+              </button>
+              <button onClick={createUser} disabled={creating}
+                style={{ flex: 1, padding: "11px", border: "none", borderRadius: 12, background: creating ? C.lightGray : C.primary, cursor: creating ? "default" : "pointer", fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "'DM Sans', sans-serif" }}>
+                {creating ? "A criar..." : "Criar utilizador"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -277,14 +393,21 @@ const ProjectsPanel = () => {
   const [pages, setPages] = useState(1);
   const [confirmAction, setConfirmAction] = useState(null);
 
+  // Load projects list
   const load = useCallback(() => {
     setL(true);
     const params = new URLSearchParams({ page, limit: 15, ...(status ? { status } : {}) });
-    adminFetch(`/projects?${params}`).then(d => { setProjects(d.data); setPages(d.pages); }).finally(() => setL(false));
+    adminFetch(`/projects?${params}`)
+      .then(d => { setProjects(d.data); setPages(d.pages); })
+      .catch(e => console.error('Erro ao carregar projectos', e))
+      .finally(() => setL(false));
   }, [page, status]);
 
+  // Load projects on mount / when dependencies change
   useEffect(() => {
-    const t = setTimeout(() => load(), 0);
+    const t = setTimeout(() => {
+      load();
+    }, 0);
     return () => clearTimeout(t);
   }, [load]);
 
@@ -305,6 +428,7 @@ const ProjectsPanel = () => {
 
   return (
     <div>
+      {/* Existing Toolbar and Table */}
       <div className="admin-toolbar">
         <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }} className="admin-select">
           <option value="">Todos os estados</option>
@@ -410,75 +534,792 @@ const ReviewsPanel = () => {
   );
 };
 
-// -------------------------------------------------------------------
-// Cores partilhadas
-// -------------------------------------------------------------------
-const C = {
-  primary: "var(--color-primary)",
-  primaryDark: "var(--color-primary-dark)",
-  accent: "var(--color-accent)",
-  dark: "var(--color-dark)",
-  gray: "var(--color-gray)",
-  lightGray: "var(--color-light-gray)",
-  white: "var(--color-white)",
-  success: "var(--color-success)",
-  error: "var(--color-error)",
-  border: "var(--color-border)",
-  purple: "var(--color-purple)",
+// ============================================================
+// PORTFOLIOS
+// ============================================================
+const PortfoliosPanel = () => {
+  const [portfolios, setPortfolios] = useState([]);
+  const [loading, setL] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [viewItem, setViewItem] = useState(null);
+
+  const load = useCallback(() => {
+    setL(true);
+    const params = new URLSearchParams({ page, limit: 15, ...(search ? { search } : {}), ...(status ? { status } : {}) });
+    adminFetch(`/portfolios?${params}`)
+      .then(d => { setPortfolios(d.data); setPages(d.pages); })
+      .catch(e => setError(e.message))
+      .finally(() => setL(false));
+  }, [page, search, status]);
+
+  useEffect(() => { const t = setTimeout(() => load(), 0); return () => clearTimeout(t); }, [load]);
+
+  const approve = async (id) => {
+    try {
+      await adminFetch(`/portfolios/${id}/approve`, { method: "POST" });
+      setPortfolios(prev => prev.map(p => p.id === id ? { ...p, featured: true } : p));
+    } catch (e) { alert(e.message); }
+  };
+
+  const reject = async (id) => {
+    try {
+      await adminFetch(`/portfolios/${id}/reject`, { method: "POST" });
+      setPortfolios(prev => prev.map(p => p.id === id ? { ...p, featured: false } : p));
+    } catch (e) { alert(e.message); }
+  };
+
+  const remove = async (id) => {
+    try {
+      await adminFetch(`/portfolios/${id}`, { method: "DELETE" });
+      setPortfolios(prev => prev.filter(p => p.id !== id));
+      setConfirmAction(null);
+    } catch (e) { alert(e.message); }
+  };
+
+  const images = (item) => {
+    try { return Array.isArray(item.imageUrls) ? item.imageUrls : JSON.parse(item.imageUrls || "[]"); }
+    catch { return []; }
+  };
+
+  return (
+    <div>
+      <div className="admin-toolbar">
+        <div className="admin-search-box">
+          <Icon icon={faSearch} size={14} color={C.gray} />
+          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Pesquisar por título..." />
+          {search && <button onClick={() => setSearch("")} className="admin-clear-btn"><Icon icon={faTimes} size={12} color={C.gray} /></button>}
+        </div>
+        <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }} className="admin-select">
+          <option value="">Todos</option>
+          <option value="approved">Aprovados</option>
+          <option value="pending">Pendentes</option>
+        </select>
+      </div>
+
+      {error && <p style={{ color: C.error }}>{error}</p>}
+      {loading ? <Spinner /> : (
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Título</th>
+                <th className="hide-mobile">Profissional</th>
+                <th className="hide-mobile">Categoria</th>
+                <th>Estado</th>
+                <th>Acções</th>
+              </tr>
+            </thead>
+            <tbody>
+              {portfolios.map(p => (
+                <tr key={p.id}>
+                  <td>
+                    <div style={{ fontWeight: 700, color: C.dark }}>{p.title}</div>
+                    <div style={{ fontSize: 11, color: C.gray }}>{p.description?.slice(0, 60)}{p.description?.length > 60 ? "…" : ""}</div>
+                  </td>
+                  <td className="hide-mobile">{p.professional?.user?.name}</td>
+                  <td className="hide-mobile">{p.category || "—"}</td>
+                  <td>
+                    <Pill bg={p.featured ? "#D1FAE5" : "#FEF3C7"} color={p.featured ? C.success : "#D97706"}>
+                      {p.featured ? "Aprovado" : "Pendente"}
+                    </Pill>
+                  </td>
+                  <td>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button className="admin-icon-btn" title="Visualizar" onClick={() => setViewItem(p)}>
+                        <Icon icon={faSearch} size={13} color={C.primary} />
+                      </button>
+                      {!p.featured && (
+                        <button className="admin-icon-btn" title="Aprovar" onClick={() => approve(p.id)}>
+                          <Icon icon={faCheck} size={13} color={C.success} />
+                        </button>
+                      )}
+                      {p.featured && (
+                        <button className="admin-icon-btn" title="Rejeitar" onClick={() => reject(p.id)}>
+                          <Icon icon={faBan} size={13} color="#D97706" />
+                        </button>
+                      )}
+                      <button className="admin-icon-btn danger" title="Eliminar" onClick={() => setConfirmAction({ id: p.id, name: p.title })}>
+                        <Icon icon={faTrash} size={13} color={C.error} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {portfolios.length === 0 && (
+                <tr><td colSpan={5} style={{ textAlign: "center", padding: 24, color: C.gray }}>Nenhum portfólio encontrado</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <Pagination page={page} pages={pages} onChange={setPage} />
+
+      {confirmAction && (
+        <ConfirmModal
+          text={`Eliminar permanentemente o portfólio "${confirmAction.name}"? Esta acção não pode ser desfeita.`}
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={() => remove(confirmAction.id)}
+        />
+      )}
+
+      {viewItem && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setViewItem(null)}>
+          <div style={{ background: C.white, borderRadius: 20, padding: 24, maxWidth: 520, width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h3 style={{ margin: 0, color: C.dark }}>{viewItem.title}</h3>
+              <button onClick={() => setViewItem(null)} style={{ background: "none", border: "none", cursor: "pointer" }}><Icon icon={faTimes} size={18} color={C.gray} /></button>
+            </div>
+            {viewItem.description && <p style={{ color: C.gray, fontSize: 13, marginBottom: 16 }}>{viewItem.description}</p>}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {images(viewItem).map((url, i) => (
+                <img key={i} src={url} alt={`img-${i}`} style={{ width: "calc(50% - 4px)", borderRadius: 10, objectFit: "cover", aspectRatio: "4/3" }} />
+              ))}
+              {images(viewItem).length === 0 && <p style={{ color: C.gray, fontSize: 13 }}>Sem imagens</p>}
+            </div>
+            {viewItem.videoUrl && (
+              <div style={{ marginTop: 12 }}>
+                <a href={viewItem.videoUrl} target="_blank" rel="noreferrer" style={{ color: C.primary, fontSize: 13 }}>Ver vídeo</a>
+              </div>
+            )}
+            <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {viewItem.category && <Pill bg={`${C.primary}15`} color={C.primary}>{viewItem.category}</Pill>}
+              {viewItem.price && <Pill bg={`${C.accent}15`} color={C.accent}>{viewItem.price} CVE</Pill>}
+              {viewItem.estimatedDuration && <Pill bg={`${C.purple}15`} color={C.purple}>{viewItem.estimatedDuration} dias</Pill>}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
-// ---------------------------------------------------------------
-// PLACE‑HOLDERS DOS NOVOS PAINÉIS (a substituir por código real)
-// ---------------------------------------------------------------
-const PortfoliosPanel = () => (
-  <div>
-    <p style={{ color: C.gray, textAlign: "center", padding: 32 }}>
-      Gestão de Portfolios (a implementar)
-    </p>
-  </div>
-);
+// ============================================================
+// COMENTÁRIOS (moderação)
+// ============================================================
+const CommentsPanel = () => {
+  const [comments, setComments] = useState([]);
+  const [loading, setL] = useState(true);
+  const [search, setSearch] = useState("");
+  const [ratingFilter, setRatingFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [confirmAction, setConfirmAction] = useState(null);
 
-const CommentsPanel = () => (
-  <div>
-    <p style={{ color: C.gray, textAlign: "center", padding: 32 }}>
-      Moderação de Comentários (a implementar)
-    </p>
-  </div>
-);
+  const load = useCallback(() => {
+    setL(true);
+    const params = new URLSearchParams({ page, limit: 15, ...(search ? { search } : {}), ...(ratingFilter ? { rating: ratingFilter } : {}) });
+    adminFetch(`/comments?${params}`)
+      .then(d => { setComments(d.data); setPages(d.pages); })
+      .catch(e => console.error(e))
+      .finally(() => setL(false));
+  }, [page, search, ratingFilter]);
 
-const LowRatingsPanel = () => (
-  <div>
-    <p style={{ color: C.gray, textAlign: "center", padding: 32 }}>
-      Profissionais com baixa classificação (a implementar)
-    </p>
-  </div>
-);
+  useEffect(() => { const t = setTimeout(() => load(), 0); return () => clearTimeout(t); }, [load]);
 
-const AlertsPanel = () => (
-  <div>
-    <p style={{ color: C.gray, textAlign: "center", padding: 32 }}>
-      Alertas do sistema (a implementar)
-    </p>
-  </div>
-);
+  const remove = async (id) => {
+    try {
+      await adminFetch(`/comments/${id}`, { method: "DELETE" });
+      setComments(prev => prev.filter(c => c.id !== id));
+      setConfirmAction(null);
+    } catch (e) { alert(e.message); }
+  };
 
-const AuditPanel = () => (
-  <div>
-    <p style={{ color: C.gray, textAlign: "center", padding: 32 }}>
-      Registo de auditoria (a implementar)
-    </p>
-  </div>
-);
+  return (
+    <div>
+      <div className="admin-toolbar">
+        <div className="admin-search-box">
+          <Icon icon={faSearch} size={14} color={C.gray} />
+          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Pesquisar por texto ou autor..." />
+          {search && <button onClick={() => setSearch("")} className="admin-clear-btn"><Icon icon={faTimes} size={12} color={C.gray} /></button>}
+        </div>
+        <select value={ratingFilter} onChange={e => { setRatingFilter(e.target.value); setPage(1); }} className="admin-select">
+          <option value="">Todas as estrelas</option>
+          {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} estrela{n > 1 ? "s" : ""}</option>)}
+        </select>
+      </div>
+
+      {loading ? <Spinner /> : (
+        <>
+          {comments.map(c => (
+            <Card key={c.id} style={{ marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: C.dark, fontSize: 14 }}>{c.author?.name}</div>
+                  <div style={{ color: C.gray, fontSize: 12 }}>avaliou {c.professional?.user?.name} ({c.professional?.specialty})</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div>
+                    {[1, 2, 3, 4, 5].map(i => <Icon key={i} icon={faStar} size={13} color={i <= c.rating ? "#F59E0B" : C.border} />)}
+                  </div>
+                  <button className="admin-icon-btn danger" title="Eliminar" onClick={() => setConfirmAction({ id: c.id })}>
+                    <Icon icon={faTrash} size={13} color={C.error} />
+                  </button>
+                </div>
+              </div>
+              <p style={{ color: C.dark, fontSize: 13, lineHeight: 1.6, margin: "10px 0 0", background: C.lightGray, padding: "10px 12px", borderRadius: 10 }}>{c.comment}</p>
+              {c.reply && (
+                <p style={{ color: C.gray, fontSize: 12, margin: "8px 0 0", paddingLeft: 12, borderLeft: `3px solid ${C.border}` }}>
+                  Resposta: {c.reply}
+                </p>
+              )}
+              <div style={{ fontSize: 11, color: C.gray, marginTop: 8 }}>{new Date(c.createdAt).toLocaleDateString("pt-PT")}</div>
+            </Card>
+          ))}
+          {comments.length === 0 && <p style={{ textAlign: "center", color: C.gray, padding: 32 }}>Nenhum comentário encontrado</p>}
+        </>
+      )}
+      <Pagination page={page} pages={pages} onChange={setPage} />
+      {confirmAction && (
+        <ConfirmModal
+          text="Eliminar este comentário? A média do profissional será recalculada."
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={() => remove(confirmAction.id)}
+        />
+      )}
+    </div>
+  );
+};
+
+// ============================================================
+// Avaliação
+// ============================================================
+const LowRatingsPanel = () => {
+  const [professionals, setProfessionals] = useState([]);
+  const [loading, setL] = useState(true);
+  const [threshold, setThreshold] = useState("3");
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [confirmAction, setConfirmAction] = useState(null);
+
+  const load = useCallback(() => {
+    setL(true);
+    const params = new URLSearchParams({ page, limit: 15, threshold });
+    adminFetch(`/professionals/low-ratings?${params}`)
+      .then(d => { setProfessionals(d.data); setPages(d.pages); })
+      .catch(e => console.error(e))
+      .finally(() => setL(false));
+  }, [page, threshold]);
+
+  useEffect(() => { const t = setTimeout(() => load(), 0); return () => clearTimeout(t); }, [load]);
+
+  const suspend = async (userId, currentActive) => {
+    try {
+      await adminFetch(`/users/${userId}/status`, { method: "PUT", body: JSON.stringify({ active: !currentActive }) });
+      setProfessionals(prev => prev.map(p =>
+        p.user.id === userId ? { ...p, user: { ...p.user, active: !currentActive } } : p
+      ));
+      setConfirmAction(null);
+    } catch (e) { alert(e.message); }
+  };
+
+  const stars = (rating) => (
+    <span>
+      {[1, 2, 3, 4, 5].map(i => <Icon key={i} icon={faStar} size={12} color={i <= Math.round(rating) ? "#F59E0B" : C.border} />)}
+      <span style={{ fontSize: 12, marginLeft: 4, color: C.gray }}>{Number(rating).toFixed(1)}</span>
+    </span>
+  );
+
+  return (
+    <div>
+      <div className="admin-toolbar">
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: "10px 14px" }}>
+          <span style={{ fontSize: 13, color: C.gray, whiteSpace: "nowrap" }}>Limite de classificação:</span>
+          <select value={threshold} onChange={e => { setThreshold(e.target.value); setPage(1); }} style={{ border: "none", outline: "none", fontSize: 13, color: C.dark, background: "transparent" }}>
+            {["1", "2", "3", "4"].map(n => <option key={n} value={n}>Abaixo de {n} estrelas</option>)}
+          </select>
+        </div>
+      </div>
+
+      {loading ? <Spinner /> : (
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Profissional</th>
+                <th className="hide-mobile">Especialidade</th>
+                <th>Avaliação</th>
+                <th className="hide-mobile">Avaliações</th>
+                <th>Estado</th>
+                <th>Acções</th>
+              </tr>
+            </thead>
+            <tbody>
+              {professionals.map(p => (
+                <tr key={p.id}>
+                  <td>
+                    <div style={{ fontWeight: 700, color: C.dark }}>{p.user?.name}</div>
+                    <div style={{ fontSize: 11, color: C.gray }}>{p.user?.email}</div>
+                  </td>
+                  <td className="hide-mobile">{p.specialty}</td>
+                  <td>{stars(p.rating)}</td>
+                  <td className="hide-mobile">{p.reviewCount}</td>
+                  <td>
+                    <Pill bg={p.user?.active === false ? "#FEE2E2" : "#D1FAE5"} color={p.user?.active === false ? C.error : C.success}>
+                      {p.user?.active === false ? "Suspenso" : "Activo"}
+                    </Pill>
+                  </td>
+                  <td>
+                    <button
+                      className="admin-icon-btn"
+                      title={p.user?.active === false ? "Reactivar" : "Suspender"}
+                      onClick={() => setConfirmAction({ userId: p.user.id, name: p.user.name, active: p.user.active })}
+                    >
+                      <Icon icon={p.user?.active === false ? faCheck : faBan} size={13} color={p.user?.active === false ? C.success : "#D97706"} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {professionals.length === 0 && (
+                <tr><td colSpan={6} style={{ textAlign: "center", padding: 24, color: C.gray }}>Nenhum profissional com classificação abaixo de {threshold}</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <Pagination page={page} pages={pages} onChange={setPage} />
+      {confirmAction && (
+        <ConfirmModal
+          text={confirmAction.active === false
+            ? `Reactivar a conta de "${confirmAction.name}"?`
+            : `Suspender a conta de "${confirmAction.name}" por baixa avaliação?`
+          }
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={() => suspend(confirmAction.userId, confirmAction.active)}
+        />
+      )}
+    </div>
+  );
+};
+
+// ============================================================
+// ALERTAS
+// ============================================================
+const AlertsPanel = () => {
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setL] = useState(true);
+  const [filter, setFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ title: "", message: "", level: "info" });
+  const [formLoading, setFormLoading] = useState(false);
+
+  const load = useCallback(() => {
+    setL(true);
+    const params = new URLSearchParams({ page, limit: 20 });
+    if (filter === "active") params.set("resolved", "false");
+    if (filter === "resolved") params.set("resolved", "true");
+    adminFetch(`/alerts?${params}`)
+      .then(d => { setAlerts(d.data); setPages(d.pages); })
+      .catch(e => console.error(e))
+      .finally(() => setL(false));
+  }, [page, filter]);
+
+  useEffect(() => { const t = setTimeout(() => load(), 0); return () => clearTimeout(t); }, [load]);
+
+  const levelColors = {
+    info:    { bg: "#DBEAFE", color: "#1D4ED8", label: "Info" },
+    warning: { bg: "#FEF3C7", color: "#D97706", label: "Aviso" },
+    error:   { bg: "#FEE2E2", color: "#DC2626", label: "Erro" },
+  };
+
+  const create = async (e) => {
+    e.preventDefault();
+    setFormLoading(true);
+    try {
+      const newAlert = await adminFetch("/alerts", { method: "POST", body: JSON.stringify(form) });
+      setAlerts(prev => [newAlert, ...prev]);
+      setForm({ title: "", message: "", level: "info" });
+      setShowForm(false);
+    } catch (err) { alert(err.message); }
+    finally { setFormLoading(false); }
+  };
+
+  const resolve = async (id) => {
+    try {
+      const updated = await adminFetch(`/alerts/${id}/resolve`, { method: "PUT" });
+      setAlerts(prev => prev.map(a => a.id === id ? { ...a, resolved: true, resolvedAt: updated.resolvedAt } : a));
+    } catch (e) { alert(e.message); }
+  };
+
+  const remove = async (id) => {
+    try {
+      await adminFetch(`/alerts/${id}`, { method: "DELETE" });
+      setAlerts(prev => prev.filter(a => a.id !== id));
+      setConfirmAction(null);
+    } catch (e) { alert(e.message); }
+  };
+
+  return (
+    <div>
+      <div className="admin-toolbar" style={{ justifyContent: "space-between" }}>
+        <select value={filter} onChange={e => { setFilter(e.target.value); setPage(1); }} className="admin-select">
+          <option value="">Todos os alertas</option>
+          <option value="active">Activos</option>
+          <option value="resolved">Resolvidos</option>
+        </select>
+        <button onClick={() => setShowForm(v => !v)} style={{ padding: "10px 16px", background: C.accent, color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 13 }}>
+          {showForm ? "Cancelar" : "Novo Alerta"}
+        </button>
+      </div>
+
+      {showForm && (
+        <Card style={{ marginBottom: 16 }}>
+          <h3 style={{ margin: "0 0 12px", color: C.dark }}>Criar Alerta</h3>
+          <form onSubmit={create} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <input
+              placeholder="Título"
+              value={form.title}
+              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+              required
+              style={{ padding: "10px 12px", border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13 }}
+            />
+            <textarea
+              placeholder="Mensagem"
+              value={form.message}
+              onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+              required
+              rows={3}
+              style={{ padding: "10px 12px", border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13, resize: "vertical" }}
+            />
+            <select
+              value={form.level}
+              onChange={e => setForm(f => ({ ...f, level: e.target.value }))}
+              style={{ padding: "10px 12px", border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13, background: C.white }}
+            >
+              <option value="info">Info</option>
+              <option value="warning">Aviso</option>
+              <option value="error">Erro</option>
+            </select>
+            <button type="submit" disabled={formLoading} style={{ padding: 10, background: C.primary, color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: formLoading ? 0.6 : 1 }}>
+              {formLoading ? "A criar..." : "Criar Alerta"}
+            </button>
+          </form>
+        </Card>
+      )}
+
+      {loading ? <Spinner /> : (
+        <>
+          {alerts.map(a => {
+            const lc = levelColors[a.level] || levelColors.info;
+            return (
+              <Card key={a.id} style={{ marginBottom: 10, borderLeft: `4px solid ${lc.color}`, opacity: a.resolved ? 0.65 : 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <Pill bg={lc.bg} color={lc.color}>{lc.label}</Pill>
+                      {a.resolved && <Pill bg="#D1FAE5" color={C.success}>Resolvido</Pill>}
+                      <span style={{ fontWeight: 700, color: C.dark, fontSize: 14 }}>{a.title}</span>
+                    </div>
+                    <p style={{ margin: 0, color: C.gray, fontSize: 13, lineHeight: 1.5 }}>{a.message}</p>
+                    <div style={{ fontSize: 11, color: C.gray, marginTop: 6 }}>
+                      {new Date(a.createdAt).toLocaleString("pt-PT")}
+                      {a.resolved && a.resolvedAt && ` · Resolvido em ${new Date(a.resolvedAt).toLocaleString("pt-PT")}`}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+                    {!a.resolved && (
+                      <button className="admin-icon-btn" title="Resolver" onClick={() => resolve(a.id)}>
+                        <Icon icon={faCheck} size={13} color={C.success} />
+                      </button>
+                    )}
+                    <button className="admin-icon-btn danger" title="Eliminar" onClick={() => setConfirmAction({ id: a.id, name: a.title })}>
+                      <Icon icon={faTrash} size={13} color={C.error} />
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+          {alerts.length === 0 && <p style={{ textAlign: "center", color: C.gray, padding: 32 }}>Nenhum alerta encontrado</p>}
+        </>
+      )}
+      <Pagination page={page} pages={pages} onChange={setPage} />
+      {confirmAction && (
+        <ConfirmModal
+          text={`Eliminar o alerta "${confirmAction.name}"?`}
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={() => remove(confirmAction.id)}
+        />
+      )}
+    </div>
+  );
+};
+
+// ============================================================
+// AUDITORIA
+// ============================================================
+const AUDIT_ACTIONS = [
+  "", "USER_SUSPENDED", "USER_REACTIVATED", "USER_DELETED",
+  "PROJECT_CREATED_BY_ADMIN", "PROJECT_DELETED",
+  "REVIEW_DELETED", "COMMENT_DELETED",
+  "PORTFOLIO_APPROVED", "PORTFOLIO_REJECTED", "PORTFOLIO_DELETED",
+  "ALERT_CREATED", "ALERT_RESOLVED", "ALERT_DELETED",
+];
+
+const AuditPanel = () => {
+  const [logs, setLogs] = useState([]);
+  const [loading, setL] = useState(true);
+  const [actionFilter, setActionFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [expandedId, setExpandedId] = useState(null);
+
+  const load = useCallback(() => {
+    setL(true);
+    const params = new URLSearchParams({ page, limit: 20, ...(actionFilter ? { action: actionFilter } : {}) });
+    adminFetch(`/audit?${params}`)
+      .then(d => { setLogs(d.data); setPages(d.pages); })
+      .catch(e => console.error(e))
+      .finally(() => setL(false));
+  }, [page, actionFilter]);
+
+  useEffect(() => { const t = setTimeout(() => load(), 0); return () => clearTimeout(t); }, [load]);
+
+  const actionLabel = (action) => action.replace(/_/g, " ");
+
+  const actionColor = (action) => {
+    if (action.includes("DELETED") || action.includes("SUSPENDED")) return { bg: "#FEE2E2", color: "#DC2626" };
+    if (action.includes("APPROVED") || action.includes("REACTIVATED") || action.includes("RESOLVED")) return { bg: "#D1FAE5", color: "#059669" };
+    if (action.includes("REJECTED")) return { bg: "#FEF3C7", color: "#D97706" };
+    return { bg: `${C.primary}15`, color: C.primary };
+  };
+
+  return (
+    <div>
+      <div className="admin-toolbar">
+        <select value={actionFilter} onChange={e => { setActionFilter(e.target.value); setPage(1); }} className="admin-select" style={{ flex: 1 }}>
+          <option value="">Todas as acções</option>
+          {AUDIT_ACTIONS.filter(a => a).map(a => <option key={a} value={a}>{actionLabel(a)}</option>)}
+        </select>
+      </div>
+
+      {loading ? <Spinner /> : (
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Acção</th>
+                <th className="hide-mobile">Administrador</th>
+                <th>Data</th>
+                <th>Detalhes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map(l => {
+                const ac = actionColor(l.action);
+                return (
+                  <tr key={l.id}>
+                    <td><Pill bg={ac.bg} color={ac.color}>{actionLabel(l.action)}</Pill></td>
+                    <td className="hide-mobile" style={{ color: C.dark, fontSize: 13 }}>
+                      {l.user ? <span>{l.user.name}<span style={{ color: C.gray, fontSize: 11, display: "block" }}>{l.user.email}</span></span> : <span style={{ color: C.gray }}>—</span>}
+                    </td>
+                    <td style={{ fontSize: 12, color: C.gray, whiteSpace: "nowrap" }}>
+                      {new Date(l.createdAt).toLocaleString("pt-PT")}
+                    </td>
+                    <td>
+                      {l.details && (
+                        <button
+                          onClick={() => setExpandedId(expandedId === l.id ? null : l.id)}
+                          style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 11, color: C.gray }}
+                        >
+                          {expandedId === l.id ? "ocultar" : "ver"}
+                        </button>
+                      )}
+                      {expandedId === l.id && l.details && (
+                        <pre style={{ margin: "6px 0 0", fontSize: 11, color: C.dark, background: C.lightGray, padding: "8px 10px", borderRadius: 8, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+                          {JSON.stringify(l.details, null, 2)}
+                        </pre>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {logs.length === 0 && (
+                <tr><td colSpan={4} style={{ textAlign: "center", padding: 24, color: C.gray }}>Nenhum registo encontrado</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <Pagination page={page} pages={pages} onChange={setPage} />
+    </div>
+  );
+};
+
+// ============================================================
+// VERIFICAÇÕES DE PROFISSIONAIS
+// ============================================================
+const VerificationsPanel = () => {
+  const [items, setItems] = useState([]);
+  const [loading, setL] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [selectedDoc, setSelectedDoc] = useState(null);
+  const [error, setError] = useState("");
+
+  const load = useCallback(() => {
+    setL(true);
+    setError("");
+    const params = new URLSearchParams({ page, limit: 15 });
+    adminFetch(`/professionals/pending?${params}`)
+      .then(d => {
+        setItems(d.data || []);
+        setPages(d.pages || 1);
+      })
+      .catch(e => {
+        console.error(e);
+        setError("Erro ao carregar dados: " + e.message);
+      })
+      .finally(() => setL(false));
+  }, [page]);
+
+  useEffect(() => {
+    const t = setTimeout(() => load(), 0);
+    return () => clearTimeout(t);
+  }, [load]);
+
+  const handleApprove = async (id) => {
+    if (!window.confirm("Tem a certeza que deseja aprovar e verificar este profissional?")) return;
+    try {
+      await adminFetch(`/professionals/${id}/approve`, { method: "POST" });
+      setItems(prev => prev.filter(item => item.id !== id));
+      alert("Profissional aprovado e verificado com sucesso!");
+    } catch (e) {
+      alert("Erro ao aprovar: " + e.message);
+    }
+  };
+
+  const handleReject = async (id) => {
+    if (!window.confirm("Tem a certeza que deseja rejeitar este documento? O profissional será notificado e terá de submeter um novo comprovativo.")) return;
+    try {
+      await adminFetch(`/professionals/${id}/reject`, { method: "POST" });
+      setItems(prev => prev.filter(item => item.id !== id));
+      alert("Documento rejeitado. O profissional foi notificado para re-enviar.");
+    } catch (e) {
+      alert("Erro ao rejeitar: " + e.message);
+    }
+  };
+
+  return (
+    <div>
+      {error && <p style={{ color: C.error, textAlign: "center", padding: 16 }}>{error}</p>}
+      
+      {loading ? <Spinner /> : (
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Profissional</th>
+                <th>Especialidade</th>
+                <th>Documento</th>
+                <th>Acções</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.length === 0 ? (
+                <tr>
+                  <td colSpan="4" style={{ textAlign: "center", color: C.gray, padding: 32 }}>
+                    Nenhum profissional com verificação pendente de momento.
+                  </td>
+                </tr>
+              ) : (
+                items.map(p => (
+                  <tr key={p.id}>
+                    <td>
+                      <div style={{ fontWeight: 700, color: C.dark }}>{p.user?.name}</div>
+                      <div style={{ fontSize: 11, color: C.gray }}>{p.user?.email}</div>
+                    </td>
+                    <td>
+                      <Pill bg={`${C.primary}15`} color={C.primary}>{p.specialty || "Geral"}</Pill>
+                    </td>
+                    <td>
+                      {p.verificationDoc ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <img
+                            src={p.verificationDoc}
+                            alt="Documento"
+                            onClick={() => setSelectedDoc(p.verificationDoc)}
+                            style={{ width: 48, height: 48, borderRadius: 6, objectFit: "cover", border: `1.5px solid ${C.border}`, cursor: "pointer" }}
+                          />
+                          <button onClick={() => setSelectedDoc(p.verificationDoc)} style={{ background: "none", border: "none", color: C.primary, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+                            Ver ampliado
+                          </button>
+                        </div>
+                      ) : (
+                        <span style={{ color: C.error, fontSize: 12 }}>Sem documento</span>
+                      )}
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          onClick={() => handleApprove(p.id)}
+                          style={{ border: "none", background: C.success, color: "#fff", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}
+                        >
+                          <Icon icon={faCheck} size={12} /> Aprovar
+                        </button>
+                        <button
+                          onClick={() => handleReject(p.id)}
+                          style={{ border: "none", background: C.error, color: "#fff", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}
+                        >
+                          <Icon icon={faTimes} size={12} /> Rejeitar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+          <Pagination page={page} pages={pages} onChange={setPage} />
+        </div>
+      )}
+
+      {selectedDoc && (
+        <div
+          onClick={() => setSelectedDoc(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, cursor: "pointer" }}
+        >
+          <div style={{ position: "relative", maxWidth: "90%", maxHeight: "90%", background: "#fff", borderRadius: 16, padding: 16, boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }} onClick={e => e.stopPropagation()}>
+            <img src={selectedDoc} alt="Documento ampliado" style={{ maxWidth: "100%", maxHeight: "75vh", borderRadius: 8, objectFit: "contain" }} />
+            <div style={{ marginTop: 12, textAlign: "right" }}>
+              <button
+                onClick={() => setSelectedDoc(null)}
+                style={{ border: "none", background: C.dark, color: "#fff", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontWeight: 700 }}
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ============================================================
 // PAINEL PRINCIPAL
 // ============================================================
+export default function AdminDashboard({ onLogout, hideHeader, tab, onChangeTab, initialTab }) {
+  const [internalTab, setInternalTab] = useState(initialTab || TABS[0].id);
+  const activeTab = tab !== undefined ? tab : internalTab;
+  const setActiveTab = onChangeTab !== undefined ? onChangeTab : setInternalTab;
 
-const initialTab = TABS[0].id;
-const [tab, setTab] = useState(initialTab);
+  useEffect(() => {
+    if (initialTab && tab === undefined) {
+      setInternalTab(initialTab);
+    }
+  }, [initialTab, tab]);
 
-return (
-  <div className="admin-shell">
-    <style>{`
+  return (
+    <div className="admin-shell">
+      <style>{`
         .admin-shell { font-family: 'DM Sans', sans-serif; min-height: 100vh; background: ${C.lightGray}; }
         .admin-topbar {
           background: #14142b; color: #fff; padding: 16px 20px; display: flex;
@@ -530,38 +1371,32 @@ return (
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
-    {!hideHeader && (
-      <div className="admin-topbar">
-        <div className="admin-topbar-title">
-          <Icon icon={faShieldAlt} size={20} color={C.accent} />
-          <span className="full-title">Painel de Administração</span>
-        </div>
-        <button className="admin-logout-btn" onClick={onLogout}>
-          <Icon icon={faSignOutAlt} size={13} /> Sair
-        </button>
-      </div>
-    )}
-
-    {!hideHeader && (
-      <div className="admin-tabs">
-        {TABS.map(t => (
-          <button key={t.id} className={`admin-tab-btn ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>
-            <Icon icon={t.icon} size={14} /> {t.label}
+      {!hideHeader && (
+        <div className="admin-topbar">
+          <div className="admin-topbar-title">
+            <Icon icon={faShieldAlt} size={20} color={C.accent} />
+            <span className="full-title">Painel de Administração</span>
+          </div>
+          <button className="admin-logout-btn" onClick={onLogout}>
+            <Icon icon={faSignOutAlt} size={13} /> Sair
           </button>
-        ))}
-      </div>
-    )}
+        </div>
+      )}
 
-    <div className="admin-body" style={{ padding: hideHeader ? "16px 12px 60px" : undefined }}>
-      {tab === "overview" && <Overview />}
-      {tab === "users" && <UsersPanel />}
-      {tab === "projects" && <ProjectsPanel />}
-      {tab === "reviews" && <ReviewsPanel />}
-      {tab === "portfolios" && <PortfoliosPanel />}
-      {tab === "comments" && <CommentsPanel />}
-      {tab === "lowRatings" && <LowRatingsPanel />}
-      {tab === "alerts" && <AlertsPanel />}
-      {tab === "audit" && <AuditPanel />}
+
+
+      <div className="admin-body" style={{ padding: hideHeader ? "16px 12px 60px" : undefined }}>
+        {activeTab === "overview" && <Overview />}
+        {activeTab === "users" && <UsersPanel />}
+        {activeTab === "projects" && <ProjectsPanel />}
+        {activeTab === "reviews" && <ReviewsPanel />}
+        {activeTab === "portfolios" && <PortfoliosPanel />}
+        {activeTab === "comments" && <CommentsPanel />}
+        {activeTab === "lowRatings" && <LowRatingsPanel />}
+        {activeTab === "verifications" && <VerificationsPanel />}
+        {activeTab === "alerts" && <AlertsPanel />}
+        {activeTab === "audit" && <AuditPanel />}
+      </div>
     </div>
-  </div>
-);
+  );
+}

@@ -356,7 +356,7 @@ model Portfolio {
   professionalId String
   title          String
   description    String?
-  imageUrls      String[]
+  imag$00ls      String[]
   videoUrl       String?
   category       String?
   featured       Boolean  @default(false)
@@ -376,7 +376,7 @@ model Portfolio {
 | `Review` | rating (1-5), comment, reply | N:1 Author, N:1 Professional, 1:1 Project |
 | `Message` | content, mediaUrl, read | N:1 Sender, N:1 Project |
 | `Schedule` | date, startTime, available | N:1 Professional |
-| `Portfolio` | title, imageUrls, category | N:1 Professional |
+| `Portfolio` | title, imag$00ls, category | N:1 Professional |
 
 ---
 

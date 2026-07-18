@@ -1,21 +1,31 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { io } from "socket.io-client";
 import logo from "../assets/logo.png";
 import { notificationsAPI } from "../services/api";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faSignOutAlt, faBell, faMoon, faSun,
-  faCheck, faCheckDouble, faTrash, faCircle,
+  faSignOutAlt,
+  faBell,
+  faMoon,
+  faSun,
+  faCheck,
+  faCheckDouble,
+  faTrash,
+  faCircle,
+  faClipboardList,
+  faCalendarAlt,
+  faStar,
 } from "@fortawesome/free-solid-svg-icons";
 
 // Ícone por tipo de notificação
 const typeIcons = {
-  PROJETO: "📋",
-  AGENDAMENTO: "📅",
-  AVALIACAO: "⭐",
-  SISTEMA: "🔔",
+  PROJETO: <FontAwesomeIcon icon={faClipboardList} />,
+  AGENDAMENTO: <FontAwesomeIcon icon={faCalendarAlt} />,
+  AVALIACAO: <FontAwesomeIcon icon={faStar} />,
+  SISTEMA: <FontAwesomeIcon icon={faBell} />,
 };
 
-export default function AppHeader({ onLogout }) {
+export default function AppHeader({ onLogout, user }) {
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -34,10 +44,10 @@ export default function AppHeader({ onLogout }) {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme(prev => prev === "light" ? "dark" : "light");
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
   };
 
-  // ── Buscar notificações via API autenticada ──
+  // ── Buscar notificações via API ──
   const fetchNotifications = useCallback(async () => {
     try {
       const [listRes, countRes] = await Promise.all([
@@ -51,14 +61,32 @@ export default function AppHeader({ onLogout }) {
     }
   }, []);
 
-  // Buscar ao montar e polling a cada 30 segundos
   useEffect(() => {
     fetchNotifications();
+    // Polling de 30s como fallback
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
-  // Fechar dropdown ao clicar fora
+  // ── Socket.IO: notificações em tempo real ────────────────────
+  useEffect(() => {
+    if (!user?.id) return;
+    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || "http://localhost:3001";
+    const socket = io(SOCKET_URL, { transports: ["websocket", "polling"] });
+
+    socket.on("connect", () => {
+      socket.emit("authenticate", user.id);
+    });
+
+    socket.on("new_notification", (notif) => {
+      setNotifications(prev => [notif, ...prev]);
+      setUnreadCount(prev => prev + 1);
+    });
+
+    return () => socket.disconnect();
+  }, [user?.id]);
+
+  // ── Fechar dropdown ao clicar fora ──
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -73,10 +101,10 @@ export default function AppHeader({ onLogout }) {
   const handleMarkRead = async (id) => {
     try {
       await notificationsAPI.markRead(id);
-      setNotifications(prev =>
-        prev.map(n => n.id === id ? { ...n, status: "LIDA" } : n)
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, status: "LIDA" } : n))
       );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
       console.error("Erro ao marcar como lida:", err);
     }
@@ -87,9 +115,7 @@ export default function AppHeader({ onLogout }) {
     try {
       setLoading(true);
       await notificationsAPI.markAllRead();
-      setNotifications(prev =>
-        prev.map(n => ({ ...n, status: "LIDA" }))
-      );
+      setNotifications((prev) => prev.map((n) => ({ ...n, status: "LIDA" })));
       setUnreadCount(0);
     } catch (err) {
       console.error("Erro ao marcar todas como lidas:", err);
@@ -102,10 +128,10 @@ export default function AppHeader({ onLogout }) {
   const handleDelete = async (id) => {
     try {
       await notificationsAPI.delete(id);
-      const deleted = notifications.find(n => n.id === id);
-      setNotifications(prev => prev.filter(n => n.id !== id));
+      const deleted = notifications.find((n) => n.id === id);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
       if (deleted && deleted.status === "NAO_LIDA") {
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        setUnreadCount((prev) => Math.max(0, prev - 1));
       }
     } catch (err) {
       console.error("Erro ao apagar notificação:", err);
@@ -131,12 +157,16 @@ export default function AppHeader({ onLogout }) {
   return (
     <header className="app-header">
       <img src={logo} alt="BuildMatch" className="app-header-logo" />
-      
+
       <div className="app-header-actions">
-        <button onClick={toggleTheme} className="header-action-btn" title="Alternar Tema">
+        <button
+          onClick={toggleTheme}
+          className="header-action-btn"
+          title="Alternar Tema"
+        >
           <FontAwesomeIcon icon={theme === "light" ? faMoon : faSun} />
         </button>
-        
+
         <div className="notification-wrapper" ref={dropdownRef}>
           <button
             onClick={() => setShowNotifications(!showNotifications)}
@@ -171,21 +201,28 @@ export default function AppHeader({ onLogout }) {
               <div className="notifications-body">
                 {notifications.length === 0 ? (
                   <div className="notifications-empty">
-                    <FontAwesomeIcon icon={faBell} style={{ fontSize: 32, opacity: 0.3 }} />
+                    <FontAwesomeIcon
+                      icon={faBell}
+                      style={{ fontSize: 32, opacity: 0.3 }}
+                    />
                     <p>Sem notificações</p>
                   </div>
                 ) : (
-                  notifications.map(n => (
+                  notifications.map((n) => (
                     <div
                       key={n.id}
-                      className={`notification-item ${n.status === "NAO_LIDA" ? "unread" : ""}`}
+                      className={`notification-item ${
+                        n.status === "NAO_LIDA" ? "unread" : ""
+                      }`}
                     >
                       <div className="notification-icon">
-                        {typeIcons[n.type] || "🔔"}
+                        {typeIcons[n.type] || <FontAwesomeIcon icon={faBell} />}
                       </div>
                       <div className="notification-content">
                         <div className="notification-title-row">
-                          <strong className="notification-title">{n.titulo}</strong>
+                          <strong className="notification-title">
+                            {n.titulo}
+                          </strong>
                           {n.status === "NAO_LIDA" && (
                             <FontAwesomeIcon
                               icon={faCircle}
@@ -202,7 +239,10 @@ export default function AppHeader({ onLogout }) {
                         {n.status === "NAO_LIDA" && (
                           <button
                             className="notif-action-btn"
-                            onClick={(e) => { e.stopPropagation(); handleMarkRead(n.id); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMarkRead(n.id);
+                            }}
                             title="Marcar como lida"
                           >
                             <FontAwesomeIcon icon={faCheck} />
@@ -210,7 +250,10 @@ export default function AppHeader({ onLogout }) {
                         )}
                         <button
                           className="notif-action-btn delete"
-                          onClick={(e) => { e.stopPropagation(); handleDelete(n.id); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(n.id);
+                          }}
                           title="Apagar"
                         >
                           <FontAwesomeIcon icon={faTrash} />
@@ -223,8 +266,12 @@ export default function AppHeader({ onLogout }) {
             </div>
           )}
         </div>
-        
-        <button onClick={onLogout} className="header-action-btn" title="Terminar Sessão">
+
+        <button
+          onClick={onLogout}
+          className="header-action-btn"
+          title="Terminar Sessão"
+        >
           <FontAwesomeIcon icon={faSignOutAlt} />
         </button>
       </div>

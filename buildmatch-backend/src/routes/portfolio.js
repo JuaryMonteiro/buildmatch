@@ -7,6 +7,18 @@ const authMiddleware   = require('../middleware/auth');
 const router = express.Router();
 const prisma = require('../lib/prisma');
 
+// GET /api/portfolio
+router.get('/', async (req, res) => {
+  try {
+    const portfolios = await prisma.portfolio.findMany({
+      orderBy: [{ featured: 'desc' }, { createdAt: 'desc' }],
+    });
+    res.json({ data: portfolios });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao obter portfólios' });
+  }
+});
+
 // GET /api/portfolio/professional/:id
 router.get('/professional/:id', async (req, res) => {
   try {

@@ -108,7 +108,7 @@ CREATE TABLE "Portfolio" (
     "professionalId" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT,
-    "imageUrls" TEXT NOT NULL DEFAULT '',
+    "imag$00ls" TEXT NOT NULL DEFAULT '',
     "videoUrl" TEXT,
     "category" TEXT,
     "featured" BOOLEAN NOT NULL DEFAULT false,

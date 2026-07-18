@@ -4,7 +4,18 @@ const prisma = require('../src/lib/prisma');
 
 async function main() {
   console.log('A popular a base de dados com dados de exemplo...');
-
+  //Criar admin
+  const admin = await prisma.user.upsert({
+      where: { email: 'admin@buildmatch.app' },
+      update: {},
+      create: {
+        name: 'Artur Silva',
+        email: 'admin@buildmatch.app',
+        password: await bcrypt.hash('123456', 12),
+        type: 'ADMIN',
+        phone: '+238 991 0002',
+      },
+    });
   // Criar clientes
   const client1 = await prisma.user.upsert({
     where: { email: 'hugo@exemplo.com' },
@@ -235,7 +246,7 @@ async function main() {
           professionalId: prof1User.professional.id,
           title: item.title,
           description: item.description,
-          imageUrls: '',
+          imageUrls: [],
           category: item.category,
           featured: item.featured,
         },
@@ -302,7 +313,7 @@ async function main() {
           professionalId: prof2User.professional.id,
           title: item.title,
           description: item.description,
-          imageUrls: '',
+          imageUrls: [],
           category: item.category,
           featured: item.featured,
         },
@@ -357,7 +368,7 @@ async function main() {
           professionalId: prof3User.professional.id,
           title: item.title,
           description: item.description,
-          imageUrls: '',
+          imageUrls: [],
           category: item.category,
           featured: item.featured,
         },

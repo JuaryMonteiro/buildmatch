@@ -39,15 +39,26 @@ export const authAPI = {
   login:    (body) => request('/api/auth/login',    { method: 'POST', body: JSON.stringify(body) }),
   me:       ()     => request('/api/auth/me'),
   changePassword: (body) => request('/api/auth/change-password', { method: 'PUT', body: JSON.stringify(body) }),
+  resendVerification: (email) => request('/api/auth/resend-verification', { method: 'POST', body: JSON.stringify({ email }) }),
+  // GET com query string (corrigido — o backend é GET /verify-email?token=...)
+  verifyEmail: (token) => fetch(`${BASE_URL}/api/auth/verify-email?token=${encod$00IComponent(token)}`).then(async r => {
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Erro na verificação');
+    return data;
+  }),
+  forgotPassword: (email) => request('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+  resetPassword:  (token, newPassword) => request('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, newPassword }) }),
 };
 
 // ── PROFESSIONALS ──────────────────────────────────
 export const professionalsAPI = {
   list:   (params = {}) => request('/api/professionals?' + new URLSearchParams(params)),
-  search: (q)           => request(`/api/professionals/search?q=${encodeURIComponent(q)}`),
+  search: (q)           => request(`/api/professionals/search?q=${encod$00IComponent(q)}`),
   get:    (id)          => request(`/api/professionals/${id}`),
   update: (id, body)    => request(`/api/professionals/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   availability: (id)    => request(`/api/professionals/${id}/availability`),
+  getMeta:      ()      => Promise.resolve({ categories: [], specialties: [] }),
+  uploadVerificationDoc: (document) => request('/api/professionals/verification-doc', { method: 'POST', body: JSON.stringify({ document }) }),
 };
 
 // ── PROJECTS ───────────────────────────────────────
@@ -57,6 +68,7 @@ export const projectsAPI = {
   create: (body)        => request('/api/projects', { method: 'POST', body: JSON.stringify(body) }),
   update: (id, body)    => request(`/api/projects/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   cancel: (id)          => request(`/api/projects/${id}`, { method: 'DELETE' }),
+  acceptDirect: (id)    => request(`/api/projects/${id}/accept`, { method: 'POST' }),
 };
 
 // ── MESSAGES ───────────────────────────────────────
@@ -78,6 +90,8 @@ export const schedulesAPI = {
   list:   (professionalId) => request(`/api/schedules/professional/${professionalId}`),
   create: (body)           => request('/api/schedules', { method: 'POST', body: JSON.stringify(body) }),
   cancel: (id)             => request(`/api/schedules/${id}`, { method: 'DELETE' }),
+  mine:   ()               => request('/api/schedules/mine'),
+  book:   (id)             => request(`/api/schedules/book/${id}`, { method: 'PUT' }),
 };
 
 // ── PORTFOLIO ──────────────────────────────────────
@@ -109,4 +123,56 @@ export const notificationsAPI = {
   markRead:     (id) => request(`/api/notifications/${id}/read`, { method: 'PUT' }),
   markAllRead:  ()   => request('/api/notifications/read-all',   { method: 'PUT' }),
   delete:       (id) => request(`/api/notifications/${id}`,      { method: 'DELETE' }),
+};
+
+// ── REVIEWS UPDATES ────────────────────────────────
+reviewsAPI.listClient = (clientId) => request(`/api/reviews/client/${clientId}`);
+reviewsAPI.createClient = (body) => request('/api/reviews/client', { method: 'POST', body: JSON.stringify(body) });
+reviewsAPI.replyClient = (id, reply) => request(`/api/reviews/client/${id}/reply`, { method: 'PUT', body: JSON.stringify({ reply }) });
+
+// ── PROPOSALS ──────────────────────────────────────
+export const proposalsAPI = {
+  listByProject: (projectId) => request(`/api/proposals/project/${projectId}`),
+  listMy:        ()          => request('/api/proposals/my'),
+  create:        (body)      => request('/api/proposals', { method: 'POST', body: JSON.stringify(body) }),
+  accept:        (id)        => request(`/api/proposals/${id}/accept`, { method: 'PUT' }),
+  reject:        (id)        => request(`/api/proposals/${id}/reject`, { method: 'PUT' }),
+  counter:       (id, body)  => request(`/api/proposals/${id}/counter`, { method: 'PUT', body: JSON.stringify(body) }),
+};
+
+// ── CONTRACTS ──────────────────────────────────────
+export const contractsAPI = {
+  getByProject: (projectId) => request(`/api/contracts/project/${projectId}`),
+  sign:         (id)        => request(`/api/contracts/${id}/sign`, { method: 'PUT' }),
+  getPdfUrl:    (id)        => `${BASE_URL}/api/contracts/${id}/pdf`,
+};
+
+// ── MILESTONES ─────────────────────────────────────
+export const milestonesAPI = {
+  list:     (contractId) => request(`/api/milestones/contract/${contractId}`),
+  create:   (body)       => request('/api/milestones', { method: 'POST', body: JSON.stringify(body) }),
+  complete: (id)         => request(`/api/milestones/${id}/complete`, { method: 'PUT' }),
+  release:  (id)         => request(`/api/milestones/${id}/release`, { method: 'PUT' }),
+};
+
+// ── PAYMENTS ───────────────────────────────────────
+export const paymentsAPI = {
+  list:    (projectId) => request(`/api/payments/project/${projectId}`),
+  create:  (body)      => request('/api/payments', { method: 'POST', body: JSON.stringify(body) }),
+  approve: (id)        => request(`/api/payments/${id}/approve`, { method: 'PUT' }),
+  reject:  (id)        => request(`/api/payments/${id}/reject`, { method: 'PUT' }),
+};
+
+// ── DISPUTES ───────────────────────────────────────
+export const disputesAPI = {
+  list:    (projectId) => request(`/api/disputes/project/${projectId}`),
+  create:  (body)      => request('/api/disputes', { method: 'POST', body: JSON.stringify(body) }),
+  resolve: (id, body)  => request(`/api/disputes/${id}/resolve`, { method: 'PUT', body: JSON.stringify(body) }),
+};
+
+// ── ADMIN ──────────────────────────────────────────
+export const adminAPI = {
+  getPendingProfessionals: () => request('/api/admin/professionals/pending'),
+  approveProfessional: (id) => request(`/api/admin/professionals/${id}/approve`, { method: 'POST' }),
+  rejectProfessional: (id) => request(`/api/admin/professionals/${id}/reject`, { method: 'POST' }),
 };
