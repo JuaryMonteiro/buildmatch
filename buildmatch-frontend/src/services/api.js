@@ -53,7 +53,7 @@ export const authAPI = {
 // ── PROFESSIONALS ──────────────────────────────────
 export const professionalsAPI = {
   list:   (params = {}) => request('/api/professionals?' + new URLSearchParams(params)),
-  search: (q)           => request(`/api/professionals/search?q=${encod$00IComponent(q)}`),
+  search: (q) => request(`/api/professionals/search?q=${encodeURIComponent(q)}`),
   get:    (id)          => request(`/api/professionals/${id}`),
   update: (id, body)    => request(`/api/professionals/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   availability: (id)    => request(`/api/professionals/${id}/availability`),
@@ -67,7 +67,7 @@ export const projectsAPI = {
   get:    (id)          => request(`/api/projects/${id}`),
   create: (body)        => request('/api/projects', { method: 'POST', body: JSON.stringify(body) }),
   update: (id, body)    => request(`/api/projects/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-  cancel: (id)          => request(`/api/projects/${id}`, { method: 'DELETE' }),
+  cancel: (id, reason)  => request(`/api/projects/${id}`, { method: 'DELETE', body: reason ? JSON.stringify({ reason }) : undefined }),
   acceptDirect: (id)    => request(`/api/projects/${id}/accept`, { method: 'POST' }),
 };
 
@@ -87,11 +87,15 @@ export const reviewsAPI = {
 
 // ── SCHEDULES ──────────────────────────────────────
 export const schedulesAPI = {
-  list:   (professionalId) => request(`/api/schedules/professional/${professionalId}`),
-  create: (body)           => request('/api/schedules', { method: 'POST', body: JSON.stringify(body) }),
-  cancel: (id)             => request(`/api/schedules/${id}`, { method: 'DELETE' }),
-  mine:   ()               => request('/api/schedules/mine'),
-  book:   (id)             => request(`/api/schedules/book/${id}`, { method: 'PUT' }),
+  list:     (professionalId) => request(`/api/schedules/professional/${professionalId}`),
+  create:   (body)           => request('/api/schedules', { method: 'POST', body: JSON.stringify(body) }),
+  cancel:   (id)             => request(`/api/schedules/${id}`, { method: 'DELETE' }),
+  mine:     ()               => request('/api/schedules/mine'),
+  mineAsClient: ()           => request('/api/schedules/mine/client'),
+  book:     (id)             => request(`/api/schedules/book/${id}`, { method: 'PUT' }),
+  accept:   (id)             => request(`/api/schedules/${id}/accept`, { method: 'PUT' }),
+  reject:   (id)             => request(`/api/schedules/${id}/reject`, { method: 'PUT' }),
+  complete: (id)             => request(`/api/schedules/${id}/complete`, { method: 'PUT' }),
 };
 
 // ── PORTFOLIO ──────────────────────────────────────

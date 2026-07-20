@@ -1,16 +1,8 @@
-import { defineConfig } from '@prisma/client/runtime';
+import { defineConfig } from '@prisma/config';
 
 export default defineConfig({
   datasource: {
-    db: {
-      provider: "postgresql",
-      url: process.env.DATABASE_URL,
-    },
-  },
-  generator: {
-    client: {
-      provider: "prisma-client-js",
-    },
+    url: process.env.DATABASE_URL,
   },
   migrations: {
     seed: "node ./prisma/seed.js",

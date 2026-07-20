@@ -99,6 +99,8 @@ router.post('/', authMiddleware, async (req, res) => {
           type: 'PROJETO',
           status: 'NAO_LIDA',
           userId: project.professional.user.id,
+          referenceType: 'PROJECT',
+          referenceId: project.id,
         },
       });
       // Emitir em tempo real via Socket.IO
@@ -144,6 +146,20 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const { title, description, status, amount, startDate, endDate, address } = req.body;
     const existingProject = await prisma.project.findUnique({ where: { id: req.params.id } });
 
+    if (!existingProject) return res.status(404).json({ error: 'Projecto não encontrado' });
+
+    let statusHistory = existingProject.statusHistory;
+    if (status && status !== existingProject.status) {
+      const currentHistory = Array.isArray(existingProject.statusHistory) ? existingProject.statusHistory : [];
+      const historyEntry = {
+        status,
+        changedAt: new Date().toISOString(),
+        changedBy: req.user.id,
+        changedByName: req.user.name || 'Utilizador'
+      };
+      statusHistory = [...currentHistory, historyEntry];
+    }
+
     const project = await prisma.project.update({
       where: { id: req.params.id },
       data: {
@@ -151,6 +167,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
         amount:    amount    ? parseFloat(amount)    : undefined,
         startDate: startDate ? new Date(startDate)   : undefined,
         endDate:   endDate   ? new Date(endDate)     : undefined,
+        statusHistory: statusHistory || undefined,
       },
       include: {
         client:       { select: { id: true, name: true } },
@@ -185,20 +202,28 @@ router.put('/:id', authMiddleware, async (req, res) => {
       ? project.professional.user.id
       : project.clientId;
 
-    try {
-      const notif = await prisma.notificacao.create({
-        data: {
-          titulo: 'Atualização de Projecto',
-          mensagem: `O projecto "${project.title}" foi atualizado para: ${label}.`,
-          type: 'PROJETO',
-          status: 'NAO_LIDA',
-          userId: targetUserId,
-        },
-      });
-      // Emitir em tempo real via Socket.IO
-      if (_app) _app.get('emitNotification')(targetUserId, notif);
-    } catch (notifErr) {
-      console.error('Erro ao criar notificação de status:', notifErr);
+    if (status && status !== existingProject.status) {
+      try {
+        const msgText = status === 'COMPLETED'
+          ? `O projecto "${project.title}" foi marcado como concluído. Avalie o serviço!`
+          : `O projecto "${project.title}" foi atualizado para: ${label}.`;
+
+        const notif = await prisma.notificacao.create({
+          data: {
+            titulo: status === 'COMPLETED' ? 'Projecto Concluído' : 'Atualização de Projecto',
+            mensagem: msgText,
+            type: 'PROJETO',
+            status: 'NAO_LIDA',
+            userId: targetUserId,
+            referenceType: 'PROJECT',
+            referenceId: project.id,
+          },
+        });
+        // Emitir em tempo real via Socket.IO
+        if (_app) _app.get('emitNotification')(targetUserId, notif);
+      } catch (notifErr) {
+        console.error('Erro ao criar notificação de status:', notifErr);
+      }
     }
 
     res.json(project);
@@ -208,15 +233,67 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// DELETE /api/projects/:id — Cancelar
+// DELETE /api/projects/:id — Cancelar com motivo opcional
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
-    await prisma.project.update({
+    const reason = req.body?.reason || req.query?.reason || null;
+    const existingProject = await prisma.project.findUnique({
       where: { id: req.params.id },
-      data: { status: 'CANCELLED' },
+      include: {
+        client: { select: { id: true, name: true } },
+        professional: { include: { user: { select: { id: true, name: true } } } },
+      }
     });
-    res.json({ message: 'Projecto cancelado com sucesso' });
+
+    if (!existingProject) return res.status(404).json({ error: 'Projecto não encontrado' });
+
+    const currentHistory = Array.isArray(existingProject.statusHistory) ? existingProject.statusHistory : [];
+    const historyEntry = {
+      status: 'CANCELLED',
+      changedAt: new Date().toISOString(),
+      changedBy: req.user.id,
+      changedByName: req.user.name || 'Utilizador',
+      reason: reason || null
+    };
+
+    const project = await prisma.project.update({
+      where: { id: req.params.id },
+      data: {
+        status: 'CANCELLED',
+        cancelReason: reason || null,
+        statusHistory: [...currentHistory, historyEntry]
+      },
+      include: {
+        client: { select: { id: true, name: true } },
+        professional: { include: { user: { select: { id: true, name: true } } } },
+      }
+    });
+
+    // Notificar a outra parte
+    const targetUserId = req.user.id === project.clientId
+      ? project.professional.user.id
+      : project.clientId;
+
+    try {
+      const notif = await prisma.notificacao.create({
+        data: {
+          titulo: 'Projecto Cancelado',
+          mensagem: `O projecto "${project.title}" foi cancelado.${reason ? ` Motivo: ${reason}` : ''}`,
+          type: 'PROJETO',
+          status: 'NAO_LIDA',
+          userId: targetUserId,
+          referenceType: 'PROJECT',
+          referenceId: project.id,
+        },
+      });
+      if (_app) _app.get('emitNotification')(targetUserId, notif);
+    } catch (notifErr) {
+      console.error('Erro ao criar notificação de cancelamento:', notifErr);
+    }
+
+    res.json({ message: 'Projecto cancelado com sucesso', project });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Erro ao cancelar projecto' });
   }
 });
@@ -348,12 +425,21 @@ router.post('/:id/accept', authMiddleware, async (req, res) => {
       });
     }
 
+    const currentHistory = Array.isArray(project.statusHistory) ? project.statusHistory : [];
+    const historyEntry = {
+      status: 'ACTIVE',
+      changedAt: new Date().toISOString(),
+      changedBy: req.user.id,
+      changedByName: req.user.name || 'Profissional'
+    };
+
     // 4. Update project to ACTIVE
     const updatedProject = await prisma.project.update({
       where: { id: projectId },
       data: {
         status: 'ACTIVE',
         amount: finalAmount,
+        statusHistory: [...currentHistory, historyEntry]
       },
       include: {
         client: { select: { id: true, name: true } },
@@ -369,7 +455,9 @@ router.post('/:id/accept', authMiddleware, async (req, res) => {
           mensagem: `O profissional ${updatedProject.professional.user.name} aceitou o seu pedido para o projeto "${updatedProject.title}". O trabalho iniciou!`,
           type: 'PROJETO',
           status: 'NAO_LIDA',
-          userId: project.clientId
+          userId: project.clientId,
+          referenceType: 'PROJECT',
+          referenceId: updatedProject.id,
         }
       });
       if (_app) _app.get('emitNotification')(project.clientId, notif);
@@ -384,4 +472,4 @@ router.post('/:id/accept', authMiddleware, async (req, res) => {
   }
 });
 
-module.exports = router;
+module.exports = router;

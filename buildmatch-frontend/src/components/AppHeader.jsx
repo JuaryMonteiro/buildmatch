@@ -15,6 +15,7 @@ import {
   faClipboardList,
   faCalendarAlt,
   faStar,
+  faComments,
 } from "@fortawesome/free-solid-svg-icons";
 
 // Ícone por tipo de notificação
@@ -22,10 +23,11 @@ const typeIcons = {
   PROJETO: <FontAwesomeIcon icon={faClipboardList} />,
   AGENDAMENTO: <FontAwesomeIcon icon={faCalendarAlt} />,
   AVALIACAO: <FontAwesomeIcon icon={faStar} />,
+  MENSAGEM: <FontAwesomeIcon icon={faComments} />,
   SISTEMA: <FontAwesomeIcon icon={faBell} />,
 };
 
-export default function AppHeader({ onLogout, user }) {
+export default function AppHeader({ onLogout, user, onNotificationAction }) {
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -138,6 +140,15 @@ export default function AppHeader({ onLogout, user }) {
     }
   };
 
+  // ── Clicar numa notificação: marca como lida e leva ao processo relacionado ──
+  const handleNotificationClick = async (n) => {
+    if (n.status === "NAO_LIDA") {
+      await handleMarkRead(n.id);
+    }
+    setShowNotifications(false);
+    if (onNotificationAction) onNotificationAction(n);
+  };
+
   // ── Formatar data ──
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
@@ -211,9 +222,11 @@ export default function AppHeader({ onLogout, user }) {
                   notifications.map((n) => (
                     <div
                       key={n.id}
+                      onClick={() => handleNotificationClick(n)}
                       className={`notification-item ${
                         n.status === "NAO_LIDA" ? "unread" : ""
                       }`}
+                      style={{ cursor: "pointer" }}
                     >
                       <div className="notification-icon">
                         {typeIcons[n.type] || <FontAwesomeIcon icon={faBell} />}

@@ -98,7 +98,7 @@ const Avatar = ({ name = "", color, size = 40, src }) => {
 };
 
 const Stars = ({ rating = 0, size = 14 }) => (
-  <span>{[1, 2, 3, 4, 5].map(i => <span key={i} style={{ color: i <= Math.floor(rating) ? "#F59E0B" : "#D1D5DB", fontSize: size }}>★</span>)}</span>
+  <span style={{ display: "inline-flex", gap: 2 }}>{[1, 2, 3, 4, 5].map(i => <Icon key={i} icon={faStar} size={size} color={i <= Math.floor(rating) ? "#F59E0B" : "#D1D5DB"} />)}</span>
 );
 
 const Card = ({ children, style, onClick }) => (
@@ -416,7 +416,7 @@ const ForgotPasswordInline = ({ onBack }) => {
 
   if (sent) return (
     <div style={{ textAlign: "center", padding: "16px 0" }}>
-      <div style={{ fontSize: 40, marginBottom: 12 }}>📧</div>
+      <div style={{ marginBottom: 12 }}><Icon icon={faEnvelope} size={40} color={C.primary} /></div>
       <p style={{ fontWeight: 700, color: C.dark }}>Email enviado!</p>
       <p style={{ color: C.gray, fontSize: 13 }}>Verifique a sua caixa de entrada. O link expira em 1 hora.</p>
       <button onClick={onBack} style={{ marginTop: 16, background: "none", border: "none", color: C.primary, fontWeight: 700, cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>← Voltar ao login</button>
@@ -952,6 +952,11 @@ const ClientSearch = ({ query: initQ, onProfSelect }) => {
     setL(true);
     try {
       const params = { sortBy: sort || sortBy, limit: 20 };
+      console.log({
+  geoLat,
+  geoLng,
+  geoRadius
+});
       if (geoLat && geoLng) {
         params.lat = geoLat;
         params.lng = geoLng;
@@ -966,19 +971,51 @@ const ClientSearch = ({ query: initQ, onProfSelect }) => {
     } catch { setProfs([]); } finally { setL(false); }
   };
 
-  const detectLocation = () => {
-    if (!navigator.geolocation) { setGeoError("Geolocalização não suportada neste browser"); return; }
-    setGeoLoading(true); setGeoError("");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setGeoLat(pos.coords.latitude);
-        setGeoLng(pos.coords.longitude);
-        setGeoLoading(false);
-      },
-      () => { setGeoError("Não foi possível obter a localização"); setGeoLoading(false); }
-    );
-  };
+ const detectLocation = () => {
+   console.log("Detectar localização");
+  if (!navigator.geolocation) {
+    setGeoError("Geolocalização não suportada neste browser");
+    return;
+  }
 
+  setGeoLoading(true);
+  setGeoError("");
+
+  navigator.geolocation.getCurrentPosition(
+   (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      setGeoLat(lat);
+      setGeoLng(lng);
+      setGeoLoading(false);
+
+      search(q, sortBy, lat, lng);
+    },
+    (error) => {
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          setGeoError("Permissão de localização negada.");
+          break;
+        case error.POSITION_UNAVAILABLE:
+          setGeoError("Localização indisponível.");
+          break;
+        case error.TIMEOUT:
+          setGeoError("Tempo de espera excedido.");
+          break;
+        default:
+          setGeoError("Não foi possível obter a localização.");
+      }
+
+      setGeoLoading(false);
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 60000,
+    }
+  );
+};
   useEffect(() => { if (initQ) search(initQ); }, []);
 
   return (
@@ -1097,13 +1134,13 @@ const ClientSearch = ({ query: initQ, onProfSelect }) => {
           {/* Geolocalização */}
           <div style={{ marginTop: 14, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
             <p style={{ fontSize: 12, fontWeight: 700, color: C.dark, margin: "0 0 8px", display: "flex", alignItems: "center", gap: 6 }}>
-              📍 Pesquisa por proximidade
+              <Icon icon={faMapMarkerAlt} size={12} color={C.dark} /> Pesquisa por proximidade
             </p>
             {geoError && <p style={{ fontSize: 11, color: C.error, margin: "0 0 6px" }}>{geoError}</p>}
             {geoLat ? (
               <div>
                 <p style={{ fontSize: 12, color: C.success, margin: "0 0 8px", display: "flex", alignItems: "center", gap: 4 }}>
-                  ✓ Localização detectada
+                  <Icon icon={faCheck} size={11} color={C.success} /> Localização detectada
                 </p>
                 <label style={{ fontSize: 12, color: C.gray, display: "block", marginBottom: 4 }}>Raio: <strong>{geoRadius} km</strong></label>
                 <input type="range" min={1} max={100} value={geoRadius} onChange={e => setGeoRadius(parseInt(e.target.value))}
@@ -1125,7 +1162,7 @@ const ClientSearch = ({ query: initQ, onProfSelect }) => {
                   fontSize: 12, fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
                   display: "flex", alignItems: "center", gap: 6
                 }}>
-                {geoLoading ? "A detectar..." : "📍 Usar a minha localização"}
+                {geoLoading ? "A detectar..." : (<><Icon icon={faMapMarkerAlt} size={12} color={C.primary} /> Usar a minha localização</>)}
               </button>
             )}
           </div>
@@ -2012,6 +2049,20 @@ const ProfProjects = ({ onOpenChat }) => {
   );
 };
 
+// Estado visual de um horário: livre, pendente (aguarda aceitação),
+// ativo (trabalho aceite e em curso), concluído.
+const SCHEDULE_STATUS_MAP = {
+  PENDING:   { label: "Pendente",  bg: "#FEF3C7", color: "#D97706", icon: faClock },
+  ACTIVE:    { label: "Ativo",     bg: "#DBEAFE", color: "#1D4ED8", icon: faHardHat },
+  COMPLETED: { label: "Concluído", bg: "#D1FAE5", color: "#059669", icon: faCheckCircle },
+};
+const scheduleBadge = (s) => {
+  if (s.status && SCHEDULE_STATUS_MAP[s.status]) return SCHEDULE_STATUS_MAP[s.status];
+  return s.available
+    ? { label: "Livre", bg: "#D1FAE5", color: "#059669", icon: faCheckCircle }
+    : { label: "Ocupado", bg: "#FEE2E2", color: C.error, icon: faTimes };
+};
+
 const ProfAgenda = ({ user }) => {
   const [schedules, setSchedules] = useState([]);
   const [loading, setL] = useState(true);
@@ -2019,12 +2070,15 @@ const ProfAgenda = ({ user }) => {
   const [start, setStart] = useState("09:00");
   const [end, setEnd] = useState("17:00");
   const [saving, setSaving] = useState(false);
+  const [actingId, setActingId] = useState(null);
+
+  const reload = () => schedulesAPI.mine().then(d => setSchedules(d.data || [])).catch(() => setSchedules([]));
 
   useEffect(() => {
     if (!user?.professional?.id) { setL(false); return; }
     // Usa o endpoint autenticado "mine" para ver TODOS os horários,
     // incluindo os já reservados por clientes (não apenas os livres).
-    schedulesAPI.mine().then(d => setSchedules(d.data || [])).catch(() => setSchedules([])).finally(() => setL(false));
+    reload().finally(() => setL(false));
   }, []);
 
   const addSlot = async () => {
@@ -2037,6 +2091,16 @@ const ProfAgenda = ({ user }) => {
       const s = await schedulesAPI.create({ date, startTime: start, endTime: end });
       setSchedules(prev => [...prev, s]); setDate("");
     } catch (err) { alert(err.message); } finally { setSaving(false); }
+  };
+
+  const respond = async (id, action) => {
+    setActingId(id);
+    try {
+      if (action === "accept") await schedulesAPI.accept(id);
+      else if (action === "reject") await schedulesAPI.reject(id);
+      else if (action === "complete") await schedulesAPI.complete(id);
+      await reload();
+    } catch (err) { alert(err.message); } finally { setActingId(null); }
   };
 
   return (
@@ -2057,19 +2121,42 @@ const ProfAgenda = ({ user }) => {
       </Card>
       {loading ? <Spinner /> : schedules.length === 0
         ? <div style={{ textAlign: "center", padding: 32, color: C.gray }}><Icon icon={faCalendarAlt} size={48} color={C.border} /><p style={{ marginTop: 12 }}>Nenhum horário adicionado</p></div>
-        : schedules.map((s, i) => (
-          <Card key={i} style={{ marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center", padding: 14 }}>
-            <div>
-              <div style={{ fontWeight: 700, color: C.dark }}>{new Date(s.date.split("T")[0] + "T12:00:00").toLocaleDateString("pt", { weekday: "long", day: "numeric", month: "long" })}</div>
-              <div style={{ color: C.gray, fontSize: 13, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
-                <Icon icon={faClock} size={11} color={C.gray} /> {s.startTime} — {s.endTime}
+        : schedules.map((s, i) => {
+          const badge = scheduleBadge(s);
+          const acting = actingId === s.id;
+          return (
+            <Card key={i} style={{ marginBottom: 10, padding: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: C.dark }}>{new Date(s.date.split("T")[0] + "T12:00:00").toLocaleDateString("pt", { weekday: "long", day: "numeric", month: "long" })}</div>
+                  <div style={{ color: C.gray, fontSize: 13, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
+                    <Icon icon={faClock} size={11} color={C.gray} /> {s.startTime} — {s.endTime}
+                  </div>
+                </div>
+                <span style={{ background: badge.bg, color: badge.color, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+                  <Icon icon={badge.icon} size={10} color={badge.color} /> {badge.label}
+                </span>
               </div>
-            </div>
-            <span style={{ background: s.available ? "#D1FAE5" : "#FEE2E2", color: s.available ? "#059669" : C.error, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-              {s.available ? "Livre" : "Ocupado"}
-            </span>
-          </Card>
-        ))
+              {s.status === "PENDING" && (
+                <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                  <Btn onClick={() => respond(s.id, "accept")} variant="success" small full disabled={acting}>
+                    <Icon icon={faCheck} size={12} color="#fff" /> {acting ? "..." : "Aceitar"}
+                  </Btn>
+                  <Btn onClick={() => respond(s.id, "reject")} variant="danger" small full disabled={acting}>
+                    <Icon icon={faTimes} size={12} color="#fff" /> {acting ? "..." : "Recusar"}
+                  </Btn>
+                </div>
+              )}
+              {s.status === "ACTIVE" && (
+                <div style={{ marginTop: 12 }}>
+                  <Btn onClick={() => respond(s.id, "complete")} variant="accent" small full disabled={acting}>
+                    <Icon icon={faCheckCircle} size={12} color="#fff" /> {acting ? "..." : "Marcar como Concluído"}
+                  </Btn>
+                </div>
+              )}
+            </Card>
+          );
+        })
       }
     </div>
   );
@@ -2263,7 +2350,7 @@ const ProfPortfolio = ({ user }) => {
                         background: C.error, border: "none", color: "#fff",
                         width: 18, height: 18, borderRadius: "50%", cursor: "pointer",
                         fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      ✕
+                      <Icon icon={faTimes} size={9} color="#fff" />
                     </button>
                   </div>
                 ))}
@@ -2697,14 +2784,14 @@ const ProfProfile = ({ user, onLogout, onUpdate, initialSection, onSectionChange
           </div>
           <div style={{ marginBottom: 16 }}>
             <button type="button" onClick={geocodeAddress} disabled={geocoding}
-              style={{ width: "100%", padding: "10px", background: "transparent", border: `1.5px solid ${C.primary}`, color: C.primary, borderRadius: 10, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>
-              {geocoding ? "A procurar no mapa..." : "🔍 Sincronizar mapa com a morada indicada acima"}
+              style={{ width: "100%", padding: "10px", background: "transparent", border: `1.5px solid ${C.primary}`, color: C.primary, borderRadius: 10, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              {geocoding ? "A procurar no mapa..." : (<><Icon icon={faSearch} size={12} color={C.primary} /> Sincronizar mapa com a morada indicada acima</>)}
             </button>
           </div>
 
           {/* Selector de coordenadas no mapa */}
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 13, fontWeight: 600, color: C.dark, display: "block", marginBottom: 6 }}>📍 Pin no Mapa (Coordenadas de Serviço)</label>
+            <label style={{ fontSize: 13, fontWeight: 600, color: C.dark, display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}><Icon icon={faMapMarkerAlt} size={12} color={C.dark} /> Pin no Mapa (Coordenadas de Serviço)</label>
             <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
               <button type="button" onClick={() => {
                 if (navigator.geolocation) {
@@ -2720,8 +2807,8 @@ const ProfProfile = ({ user, onLogout, onUpdate, initialSection, onSectionChange
                 } else {
                   alert("Geolocalização não é suportada por este browser.");
                 }
-              }} style={{ padding: "8px 12px", background: `${C.primary}12`, border: `1px solid ${C.primary}30`, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.primary, fontFamily: "'DM Sans', sans-serif" }}>
-                📍 Detetar a minha localização GPS
+              }} style={{ padding: "8px 12px", background: `${C.primary}12`, border: `1px solid ${C.primary}30`, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.primary, fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
+                <Icon icon={faMapMarkerAlt} size={12} color={C.primary} /> Detetar a minha localização GPS
               </button>
               {latitude && (
                 <span style={{ fontSize: 12, color: C.gray, alignSelf: "center" }}>
@@ -3171,6 +3258,10 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
   const [commentVal, setCommentVal] = useState("");
   const [reviewed, setReviewed] = useState(false);
 
+  // Cancellation states
+  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+
   // ── Histórico inicial via API REST ──────────────
   useEffect(() => {
     messagesAPI.history(conversation.id)
@@ -3560,8 +3651,8 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
         <Avatar name={name} size={42} src={peerAvatar} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: "#fff", fontWeight: 700, fontSize: 15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
-          {subtitle && <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {isPro ? `📋 ${subtitle}` : subtitle}
+          {subtitle && <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: 5 }}>
+            {isPro && <Icon icon={faClipboardList} size={10} color="rgba(255,255,255,0.6)" />} {subtitle}
           </div>}
         </div>
         {/* Professional: quick shortcut to send quote */}
@@ -3733,6 +3824,20 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
                     </span>
                   </div>
 
+                  {project.status === 'CANCELLED' && project.cancelReason && (
+                    <div style={{
+                      marginTop: 12,
+                      background: '#FEE2E2',
+                      color: C.error,
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      fontSize: 13,
+                      fontWeight: 600
+                    }}>
+                      ⚠️ Motivo do Cancelamento: "{project.cancelReason}"
+                    </div>
+                  )}
+
                   {/* Ações para o Profissional */}
                   {isPro && proposal?.status === "ACCEPTED" && (
                     <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.border}` }}>
@@ -3772,6 +3877,130 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
                           <Icon icon={faCheck} size={13} style={{ marginRight: 6 }} /> Marcar Projeto como Concluído
                         </Btn>
                       )}
+                    </div>
+                  )}
+
+                  {/* Ações de Cancelamento */}
+                  {(project.status === 'PENDING' || project.status === 'ACTIVE') && (
+                    <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.border}` }}>
+                      {!showCancelForm ? (
+                        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                          <button onClick={() => setShowCancelForm(true)} style={{
+                            background: "none",
+                            border: "none",
+                            color: C.error,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            textDecoration: "underline",
+                            fontFamily: "'DM Sans', sans-serif"
+                          }}>
+                            Cancelar Projeto
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ background: `${C.error}08`, padding: 12, borderRadius: 10, border: `1px dashed ${C.error}50` }}>
+                          <h4 style={{ margin: "0 0 8px", fontSize: 13, color: C.error, fontWeight: 700 }}>
+                            Motivo do Cancelamento
+                          </h4>
+                          <Input
+                            label="Justificativa"
+                            value={cancelReason}
+                            onChange={e => setCancelReason(e.target.value)}
+                            placeholder="Descreva o motivo do cancelamento..."
+                          />
+                          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                            <Btn onClick={async () => {
+                              if (!cancelReason.trim()) {
+                                alert("O motivo do cancelamento é obrigatório.");
+                                return;
+                              }
+                              if (window.confirm("Tem certeza que deseja cancelar este projeto?")) {
+                                setSubmitting(true);
+                                try {
+                                  await projectsAPI.cancel(project.id, cancelReason);
+                                  alert("Projeto cancelado.");
+                                  setCancelReason("");
+                                  setShowCancelForm(false);
+                                  await loadProjectData();
+                                } catch (err) {
+                                  alert(err.message);
+                                } finally {
+                                  setSubmitting(false);
+                                }
+                              }
+                            }} variant="danger" small full disabled={submitting}>
+                              Confirmar Cancelamento
+                            </Btn>
+                            <Btn onClick={() => {
+                              setShowCancelForm(false);
+                              setCancelReason("");
+                            }} variant="ghost" small full disabled={submitting}>
+                              Voltar
+                            </Btn>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Linha do Tempo de Status (Status History) */}
+                  {project.statusHistory && Array.isArray(project.statusHistory) && project.statusHistory.length > 0 && (
+                    <div style={{ marginTop: 16, borderTop: `1px solid ${C.border}`, paddingTop: 14 }}>
+                      <h4 style={{ margin: "0 0 10px", fontSize: 13, color: C.dark, fontWeight: 700 }}>
+                        Histórico do Projeto
+                      </h4>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {project.statusHistory.map((h, index) => {
+                          const statusLabels = {
+                            PENDING: 'Pendente (Acordo Aceite)',
+                            ACTIVE: 'Em Andamento (Trabalho Iniciado)',
+                            COMPLETED: 'Concluído',
+                            CANCELLED: 'Cancelado',
+                          };
+                          return (
+                            <div key={index} style={{ display: "flex", gap: 10, fontSize: 12, alignItems: "flex-start" }}>
+                              <div style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: "50%",
+                                background:
+                                  h.status === 'COMPLETED' ? C.success :
+                                  h.status === 'ACTIVE' ? C.accent :
+                                  h.status === 'CANCELLED' ? C.error :
+                                  '#D97706',
+                                marginTop: 4,
+                                flexShrink: 0
+                              }} />
+                              <div style={{ flex: 1 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                  <span style={{ fontWeight: 700, color: C.dark }}>
+                                    {statusLabels[h.status] || h.status}
+                                  </span>
+                                  <span style={{ color: C.gray, fontSize: 10 }}>
+                                    {new Date(h.changedAt).toLocaleString("pt")}
+                                  </span>
+                                </div>
+                                <div style={{ color: C.gray, marginTop: 2 }}>
+                                  Alterado por: <b>{h.changedByName}</b>
+                                </div>
+                                {h.reason && (
+                                  <div style={{
+                                    marginTop: 4,
+                                    background: '#FEE2E2',
+                                    color: C.error,
+                                    padding: "6px 10px",
+                                    borderRadius: 6,
+                                    fontStyle: "italic"
+                                  }}>
+                                    Motivo: "{h.reason}"
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </Card>
@@ -3927,8 +4156,8 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
 
                     {/* If accepted, show confirmation banner */}
                     {proposal.status === "ACCEPTED" && (
-                      <div style={{ marginTop: 10, background: "#D1FAE5", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#065F46", fontWeight: 600 }}>
-                        ✓ Proposta aceite — Contrato gerado automaticamente. Avance para assinar.
+                      <div style={{ marginTop: 10, background: "#D1FAE5", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#065F46", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                        <Icon icon={faCheck} size={12} color="#065F46" /> Proposta aceite — Contrato gerado automaticamente. Avance para assinar.
                       </div>
                     )}
 
@@ -3967,14 +4196,14 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
                   <div style={{ fontSize: 13, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                       <span>Cliente:</span>
-                      <span style={{ fontWeight: 600, color: contract.terms?.clientSignedAt ? C.success : C.error }}>
-                        {contract.terms?.clientSignedAt ? "✓ Assinado" : "Pendente"}
+                      <span style={{ fontWeight: 600, color: contract.terms?.clientSignedAt ? C.success : C.error, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        {contract.terms?.clientSignedAt ? (<><Icon icon={faCheck} size={11} color={C.success} /> Assinado</>) : "Pendente"}
                       </span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
                       <span>Profissional:</span>
-                      <span style={{ fontWeight: 600, color: contract.terms?.professionalSignedAt ? C.success : C.error }}>
-                        {contract.terms?.professionalSignedAt ? "✓ Assinado" : "Pendente"}
+                      <span style={{ fontWeight: 600, color: contract.terms?.professionalSignedAt ? C.success : C.error, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        {contract.terms?.professionalSignedAt ? (<><Icon icon={faCheck} size={11} color={C.success} /> Assinado</>) : "Pendente"}
                       </span>
                     </div>
 
@@ -4163,7 +4392,7 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
               )}
 
               {/* ── 6. AVALIAÇÃO DO PROJETO ── */}
-              {proposal?.project?.status === "COMPLETED" && (
+              {project?.status === "COMPLETED" && (
                 <Card style={{ borderLeft: `4px solid ${C.purple}` }}>
                   <h3 style={{ margin: "0 0 12px", color: C.dark, display: "flex", alignItems: "center", gap: 8 }}>
                     <Icon icon={faStar} color={C.purple} size={18} /> Avaliação Mútua
@@ -4426,8 +4655,13 @@ const ScheduleScreen = ({ professional, onBack, onConfirm }) => {
             )}
             <Btn onClick={confirm} full variant="accent" disabled={!selectedSlot || booking}>
               <Icon icon={faCheck} size={14} color="#fff" />
-              {booking ? "A reservar..." : selectedSlot ? `Confirmar: ${new Date(selectedSlot.date).getDate()} às ${selectedSlot.startTime}` : "Seleccione data e hora"}
+              {booking ? "A enviar pedido..." : selectedSlot ? `Pedir agendamento: ${new Date(selectedSlot.date).getDate()} às ${selectedSlot.startTime}` : "Seleccione data e hora"}
             </Btn>
+            {selectedSlot && !booking && (
+              <p style={{ color: C.gray, fontSize: 12, textAlign: "center", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                <Icon icon={faClock} size={11} color={C.gray} /> O profissional precisa de aceitar antes de o horário ficar confirmado
+              </p>
+            )}
           </>
         )}
       </div>
@@ -4444,6 +4678,61 @@ const ScheduleScreen = ({ professional, onBack, onConfirm }) => {
     </div>
   );
 };
+
+// Ecrã do cliente para ver o estado dos seus próprios pedidos de agendamento
+// (Pendente / Ativo / Concluído / Recusado). É para aqui que uma notificação
+// de agendamento leva o cliente ao ser clicada.
+const MyBookingsScreen = ({ onBack, focusId }) => {
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    schedulesAPI.mineAsClient()
+      .then(d => setBookings(d.data || []))
+      .catch(err => setError(err.message || "Não foi possível carregar os seus agendamentos."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ background: C.primary, padding: "20px 16px 24px", borderBottomLeftRadius: 24, borderBottomRightRadius: 24 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: "#fff", fontSize: 16, cursor: "pointer", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+          <Icon icon={faArrowLeft} size={14} color="#fff" />
+        </button>
+        <h2 style={{ color: "#fff", fontSize: 20, fontWeight: 800, margin: 0 }}>Os Meus Agendamentos</h2>
+      </div>
+      <div style={{ padding: "20px 16px", maxWidth: 560, margin: "0 auto" }}>
+        <ErrMsg msg={error} />
+        {loading ? <Spinner /> : bookings.length === 0 ? (
+          <Card style={{ textAlign: "center", padding: 32 }}>
+            <Icon icon={faCalendarAlt} size={40} color={C.border} />
+            <p style={{ color: C.gray, marginTop: 12 }}>Ainda não fez nenhum pedido de agendamento.</p>
+          </Card>
+        ) : bookings.map((s) => {
+          const badge = scheduleBadge(s);
+          const isFocused = focusId && s.id === focusId;
+          return (
+            <Card key={s.id} style={{ marginBottom: 10, padding: 14, border: isFocused ? `1.5px solid ${C.primary}` : undefined }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: C.dark }}>{s.professional?.user?.name || "Profissional"}</div>
+                  <div style={{ color: C.gray, fontSize: 13, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
+                    <Icon icon={faCalendarAlt} size={11} color={C.gray} /> {new Date(s.date.split("T")[0] + "T12:00:00").toLocaleDateString("pt", { day: "numeric", month: "long" })} · {s.startTime} — {s.endTime}
+                  </div>
+                </div>
+                <span style={{ background: badge.bg, color: badge.color, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+                  <Icon icon={badge.icon} size={10} color={badge.color} /> {badge.label}
+                </span>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 
 const ResponsiveShell = () => (
   <style>{`
@@ -4489,6 +4778,8 @@ export default function BuildMatchApp() {
   const [searchQ, setSearchQ] = useState("");
   const [openChat, setOpenChat] = useState(null);
   const [scheduleFor, setScheduleFor] = useState(null);
+  const [showMyBookings, setShowMyBookings] = useState(false);
+  const [focusScheduleId, setFocusScheduleId] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [initialProfileSection, setInitialProfileSection] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -4538,30 +4829,34 @@ useEffect(() => {
     if (isPro) setProfTab("messages"); else setClientTab("messages");
   };
 
-  const handleNotificationAction = async (notif, action) => {
+  // Chamado quando se clica numa notificação — leva ao processo relacionado
+  // (projecto, agendamento, etc.), usando referenceType/referenceId que o
+  // backend envia em cada notificação.
+  const handleNotificationAction = async (notif) => {
     try {
-      const { projectsAPI } = await import("./services/api");
-      if (action === 'chat' && notif.projectId) {
-        const project = await projectsAPI.get(notif.projectId);
+      if (notif.referenceType === 'PROJECT' && notif.referenceId) {
+        const { projectsAPI } = await import("./services/api");
+        const project = await projectsAPI.get(notif.referenceId);
         goToChat({
           id: project.id,
           title: project.title,
           professional: project.professional,
           client: project.client
         });
-      } else if (action === 'accept' && notif.projectId) {
-        await projectsAPI.update(notif.projectId, { status: 'ACTIVE' });
-        success("Serviço aceite! O projecto está agora activo.");
-        const project = await projectsAPI.get(notif.projectId);
-        goToChat({
-          id: project.id,
-          title: project.title,
-          professional: project.professional,
-          client: project.client
-        });
+        return;
       }
+      if (notif.referenceType === 'SCHEDULE' || notif.referenceType === 'SCHEDULE_REJECTED') {
+        if (isPro) {
+          setProfTab("agenda");
+        } else {
+          setFocusScheduleId(notif.referenceId || null);
+          setShowMyBookings(true);
+        }
+        return;
+      }
+      // Sem referência conhecida — não há para onde navegar.
     } catch (err) {
-      alert("Erro ao processar acção da notificação: " + err.message);
+      alert("Erro ao abrir notificação: " + err.message);
     }
   };
 
@@ -4622,7 +4917,13 @@ if (isPendingProVerification) {
   if (scheduleFor) return (
     <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: C.lightGray }}>
       <ScheduleScreen professional={scheduleFor} onBack={() => setScheduleFor(null)}
-        onConfirm={() => { setScheduleFor(null); success("Agendamento realizado! O profissional será notificado."); }} />
+        onConfirm={() => { setScheduleFor(null); success("Pedido de agendamento enviado! Aguarda confirmação do profissional."); }} />
+    </div>
+  );
+
+  if (showMyBookings) return (
+    <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: C.lightGray }}>
+      <MyBookingsScreen focusId={focusScheduleId} onBack={() => { setShowMyBookings(false); setFocusScheduleId(null); }} />
     </div>
   );
 
@@ -4815,7 +5116,7 @@ const ResetPasswordScreen = () => {
         <Card>
           {status === "success" ? (
             <div style={{ textAlign: "center", padding: "16px 0" }}>
-              <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
+              <div style={{ marginBottom: 16 }}><Icon icon={faCheckCircle} size={56} color={C.success} /></div>
               <p style={{ fontWeight: 800, fontSize: 20, color: C.dark }}>Password redefinida!</p>
               <p style={{ color: C.gray, marginBottom: 24 }}>Pode fazer login com a sua nova password.</p>
               <Btn onClick={goToApp} full>Ir para o login</Btn>

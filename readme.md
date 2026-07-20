@@ -927,6 +927,7 @@ npx prisma studio     # Interface visual da base de dados (localhost:5555)
 npx prisma db push    # Aplicar schema sem gerar migração
 npx prisma generate   # Re-gerar o Prisma Client
 npx prisma migrate dev --name nome_da_migracao  # Criar migração SQL
+node prisma/seed.js    # popular a base de dados
 
 # Git (workflow do projecto)
 git add .

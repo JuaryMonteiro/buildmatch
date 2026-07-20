@@ -149,6 +149,14 @@ router.put('/:id/accept', authMiddleware, async (req, res) => {
       data: { status: 'REJECTED' }
     });
 
+    const currentHistory = Array.isArray(proposal.project.statusHistory) ? proposal.project.statusHistory : [];
+    const historyEntry = {
+      status: 'PENDING',
+      changedAt: new Date().toISOString(),
+      changedBy: req.user.id,
+      changedByName: req.user.name || 'Cliente'
+    };
+
     // Update project with accepted details and professionalId
     await prisma.project.update({
       where: { id: proposal.projectId },
@@ -156,7 +164,8 @@ router.put('/:id/accept', authMiddleware, async (req, res) => {
         professionalId: proposal.professionalId,
         amount: proposal.proposedAmount,
         budgetDeadline: proposal.proposedDeadline,
-        status: 'PENDING' // Remains pending until contract and payment are approved
+        status: 'PENDING', // Remains pending until contract and payment are approved
+        statusHistory: [...currentHistory, historyEntry]
       }
     });
 

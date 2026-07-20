@@ -72,6 +72,8 @@ router.post('/', authMiddleware, async (req, res) => {
             type: 'AVALIACAO',
             status: 'NAO_LIDA',
             userId: professional.userId,
+            referenceType: 'REVIEW',
+            referenceId: review.id,
           },
         });
       }
@@ -165,6 +167,8 @@ router.post('/client', authMiddleware, async (req, res) => {
           type: 'AVALIACAO',
           status: 'NAO_LIDA',
           userId: clientId,
+          referenceType: 'REVIEW',
+          referenceId: review.id,
         },
       });
     } catch (notifErr) {

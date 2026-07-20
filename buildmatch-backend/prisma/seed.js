@@ -6,14 +6,15 @@ async function main() {
   console.log('A popular a base de dados com dados de exemplo...');
   //Criar admin
   const admin = await prisma.user.upsert({
-      where: { email: 'admin@buildmatch.app' },
+      where: { email: 'suporte.buildmatch@gmail.com' },
       update: {},
       create: {
         name: 'Artur Silva',
-        email: 'admin@buildmatch.app',
+        email: 'suporte.buildmatch@gmail.com',
         password: await bcrypt.hash('123456', 12),
         type: 'ADMIN',
         phone: '+238 991 0002',
+        emailVerified: true,
       },
     });
   // Criar clientes
@@ -26,6 +27,7 @@ async function main() {
       password: await bcrypt.hash('123456', 12),
       type: 'CLIENT',
       phone: '+238 991 0001',
+      emailVerified: true,
     },
   });
 
@@ -38,6 +40,7 @@ async function main() {
       password: await bcrypt.hash('123456', 12),
       type: 'CLIENT',
       phone: '+238 991 0002',
+      emailVerified: true,
     },
   });
 
@@ -51,6 +54,7 @@ async function main() {
       password: await bcrypt.hash('123456', 12),
       type: 'PROFESSIONAL',
       phone: '+238 991 0003',
+      emailVerified: true,
       professional: {
         create: {
           specialty: 'Pedreiro',
@@ -82,6 +86,7 @@ async function main() {
       password: await bcrypt.hash('123456', 12),
       type: 'PROFESSIONAL',
       phone: '+238 991 0004',
+      emailVerified: true,
       professional: {
         create: {
           specialty: 'Eletricista',
@@ -113,6 +118,7 @@ async function main() {
       password: await bcrypt.hash('123456', 12),
       type: 'PROFESSIONAL',
       phone: '+238 991 0005',
+      emailVerified: true,
       professional: {
         create: {
           specialty: 'Canalizador',
@@ -376,14 +382,9 @@ async function main() {
     }
   }
 
-  console.log('✅ Base de dados populada com sucesso!');
+  console.log(' Base de dados populada com sucesso!');
   console.log('');
-  console.log('Contas de teste:');
-  console.log('  Cliente:      hugo@exemplo.com       / 123456');
-  console.log('  Cliente:      ana@exemplo.com        / 123456');
-  console.log('  Profissional: joao.pedreiro@exemplo.com / 123456');
-  console.log('  Profissional: maria.eletricista@exemplo.com / 123456');
-  console.log('  Profissional: carlos.canalizador@exemplo.com / 123456');
+  
 }
 
 main()

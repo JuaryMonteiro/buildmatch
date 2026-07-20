@@ -18,6 +18,7 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 
 // GET /api/professionals — Listar com filtros
 router.get('/', async (req, res) => {
+  console.log(req.query);
   try {
     const {
       specialty, location, minRating,
@@ -242,4 +243,4 @@ router.post('/verification-doc', authMiddleware, async (req, res) => {
   }
 });
 
-module.exports = router;
+module.exports = router;

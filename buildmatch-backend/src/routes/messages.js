@@ -7,6 +7,10 @@ const authMiddleware   = require('../middleware/auth');
 const router = express.Router();
 const prisma = require('../lib/prisma');
 
+// Helper para emitir notificações em tempo real (acedido via app)
+let _app = null;
+router.use((req, res, next) => { if (!_app) _app = req.app; next(); });
+
 // GET /api/messages/conversations
 router.get('/conversations', authMiddleware, async (req, res) => {
   try {
@@ -74,6 +78,36 @@ router.post('/project/:projectId', authMiddleware, async (req, res) => {
       },
       include: { sender: { select: { id: true, name: true, avatar: true } } },
     });
+
+    // ── Notificar a outra parte da conversa sobre a nova mensagem ──
+    try {
+      const project = await prisma.project.findUnique({
+        where: { id: req.params.projectId },
+        include: { client: true, professional: { include: { user: true } } },
+      });
+      if (project) {
+        const recipientId = req.user.id === project.clientId
+          ? project.professional.user.id
+          : project.clientId;
+        // Não notificar quem enviou a mensagem a si próprio
+        if (recipientId && recipientId !== req.user.id) {
+          const notif = await prisma.notificacao.create({
+            data: {
+              titulo: `Nova mensagem de ${message.sender.name}`,
+              mensagem: content ? content.slice(0, 120) : 'Enviou um ficheiro.',
+              type: 'MENSAGEM',
+              status: 'NAO_LIDA',
+              userId: recipientId,
+              referenceType: 'PROJECT',
+              referenceId: project.id,
+            },
+          });
+          if (_app) _app.get('emitNotification')(recipientId, notif);
+        }
+      }
+    } catch (notifErr) {
+      console.error('Erro ao criar notificação de mensagem:', notifErr);
+    }
 
     res.status(201).json(message);
   } catch (err) {

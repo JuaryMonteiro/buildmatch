@@ -1,4 +1,4 @@
-// Prisma schema for BuildMatch backend
+
 
 datasource db {
   provider = "postgresql"
@@ -60,6 +60,13 @@ enum DisputeStatus {
   REJECTED
 }
 
+enum ScheduleStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
 // ── Models ────────────────────────────────────────
 
 model User {
@@ -71,6 +78,7 @@ model User {
   avatar                   String?
   phone                    String?
   active                   Boolean       @default(true)
+  
   emailVerified            Boolean       @default(false)
   verificationToken        String?       @unique
   verificationTokenExpires DateTime?
@@ -90,6 +98,7 @@ model User {
   proposals                Proposal[]
   payments                 Payment[]
   disputesRaised           Dispute[]     @relation("UserDisputesRaised")
+  schedulesBooked          Schedule[]    @relation("ScheduleClient")
 }
 
 model Professional {
@@ -139,6 +148,8 @@ model Project {
   startDate        DateTime?
   endDate          DateTime?
   address          String?
+  statusHistory    Json?     // Array of {status, changedAt, changedBy}
+  cancelReason     String?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
@@ -199,13 +210,19 @@ model Message {
 model Schedule {
   id             String   @id @default(uuid())
   professionalId String
+  clientId       String?
   date           DateTime
   startTime      String
   endTime        String
   available      Boolean  @default(true)
+  // null enquanto o horário está livre (ainda não reservado);
+  // preenchido apenas depois de um cliente o reservar.
+  status         ScheduleStatus?
   createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   professional Professional @relation(fields: [professionalId], references: [id])
+  client       User?        @relation("ScheduleClient", fields: [clientId], references: [id])
 }
 
 model Portfolio {
@@ -263,6 +280,12 @@ model Notificacao {
   status   String
   userId   String
   data_criacao DateTime @default(now())
+
+  // Referência genérica para onde a notificação deve levar ao ser clicada.
+  // Ex.: referenceType "PROJECT"  + referenceId = Project.id
+  //      referenceType "SCHEDULE" + referenceId = Schedule.id
+  referenceType String?
+  referenceId   String?
 
   user User @relation(fields: [userId], references: [id])
 }
