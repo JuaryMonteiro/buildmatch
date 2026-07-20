@@ -177,23 +177,7 @@ npm run dev
 
 ### Ficheiros de Ambiente
 
-**`buildmatch-backend/.env`**
-```env
-DATABASE_URL="postgresql://postgres:qwerty@localhost:5432/buildmatch"
-PORT=3001
-NODE_ENV=development
-FRONTEND_URL=http://localhost:5173
-JWT_SECRET=<secret_longo>
-JWT_EXPIRES_IN=7d
-EMAIL_USER=suporte.buildmatch@gmail.com
-EMAIL_PASS=<app_password_google>
-EMAIL_FROM="BuildMatch <suporte.buildmatch@gmail.com>"
-# AWS S3 (upload de imagens — não activado):
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-AWS_BUCKET_NAME=buildmatch-media
-AWS_REGION=eu-west-1
-```
+
 
 > **Nota sobre `EMAIL_PASS`:** contas Gmail com autenticação em dois fatores não aceitam a password normal da conta para SMTP. É obrigatório gerar uma **App Password** em `https://myaccount.google.com/apppasswords` e usar esse valor. Usar a password normal falha silenciosamente na autenticação SMTP e é capturado pelo `try/catch` em `mailer.js`, resultando em erro 500 na rota `resend-verification`.
 
