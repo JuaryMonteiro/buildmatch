@@ -73,19 +73,41 @@ export default function AppHeader({ onLogout, user, onNotificationAction }) {
   // ── Socket.IO: notificações em tempo real ────────────────────
   useEffect(() => {
     if (!user?.id) return;
+
     const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || "http://localhost:3001";
-    const socket = io(SOCKET_URL, { transports: ["websocket", "polling"] });
+
+    // Usar polling primeiro, depois upgrade para websocket — mais robusto e evita
+    // o erro "WebSocket closed before connection established" em hot-reload / re-renders rápidos
+    const socket = io(SOCKET_URL, {
+      transports: ["polling", "websocket"],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
+      timeout: 10000,
+    });
+
+    let mounted = true;
 
     socket.on("connect", () => {
-      socket.emit("authenticate", user.id);
+      if (mounted) socket.emit("authenticate", user.id);
     });
 
     socket.on("new_notification", (notif) => {
-      setNotifications(prev => [notif, ...prev]);
-      setUnreadCount(prev => prev + 1);
+      if (mounted) {
+        setNotifications(prev => [notif, ...prev]);
+        setUnreadCount(prev => prev + 1);
+      }
     });
 
-    return () => socket.disconnect();
+    socket.on("connect_error", () => {
+      // Falha silenciosa — o polling de 30s serve de fallback
+    });
+
+    return () => {
+      mounted = false;
+      socket.disconnect();
+    };
   }, [user?.id]);
 
   // ── Fechar dropdown ao clicar fora ──

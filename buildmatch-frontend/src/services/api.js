@@ -41,7 +41,7 @@ export const authAPI = {
   changePassword: (body) => request('/api/auth/change-password', { method: 'PUT', body: JSON.stringify(body) }),
   resendVerification: (email) => request('/api/auth/resend-verification', { method: 'POST', body: JSON.stringify({ email }) }),
   // GET com query string (corrigido — o backend é GET /verify-email?token=...)
-  verifyEmail: (token) => fetch(`${BASE_URL}/api/auth/verify-email?token=${encod$00IComponent(token)}`).then(async r => {
+  verifyEmail: (token) => fetch(`${BASE_URL}/api/auth/verify-email?token=${encodeURIComponent(token)}`).then(async r => {
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Erro na verificação');
     return data;
@@ -147,7 +147,7 @@ export const proposalsAPI = {
 // ── CONTRACTS ──────────────────────────────────────
 export const contractsAPI = {
   getByProject: (projectId) => request(`/api/contracts/project/${projectId}`),
-  sign:         (id)        => request(`/api/contracts/${id}/sign`, { method: 'PUT' }),
+  sign:         (id, documentBase64) => request(`/api/contracts/${id}/sign`, { method: 'PUT', body: JSON.stringify({ document: documentBase64 }) }),
   getPdfUrl:    (id)        => `${BASE_URL}/api/contracts/${id}/pdf`,
 };
 
@@ -172,6 +172,22 @@ export const disputesAPI = {
   list:    (projectId) => request(`/api/disputes/project/${projectId}`),
   create:  (body)      => request('/api/disputes', { method: 'POST', body: JSON.stringify(body) }),
   resolve: (id, body)  => request(`/api/disputes/${id}/resolve`, { method: 'PUT', body: JSON.stringify(body) }),
+};
+
+// ── CATEGORIES ─────────────────────────────────────
+export const categoriesAPI = {
+  list:   ()         => request('/api/categories'),
+  create: (body)     => request('/api/categories', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id, body) => request(`/api/categories/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  delete: (id)       => request(`/api/categories/${id}`, { method: 'DELETE' }),
+};
+
+// ── FAQS ───────────────────────────────────────────
+export const faqsAPI = {
+  list:   (type)     => request(`/api/faqs${type ? `?type=${type}` : ''}`),
+  create: (body)     => request('/api/faqs', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id, body) => request(`/api/faqs/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  delete: (id)       => request(`/api/faqs/${id}`, { method: 'DELETE' }),
 };
 
 // ── ADMIN ──────────────────────────────────────────

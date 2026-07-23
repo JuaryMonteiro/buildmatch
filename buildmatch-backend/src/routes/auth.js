@@ -149,6 +149,10 @@ router.put('/change-password', authMiddleware, async (req, res) => {
       return res.status(401).json({ error: 'Password actual incorrecta' });
     }
 
+    if (currentPassword === newPassword || (await bcrypt.compare(newPassword, user.password))) {
+      return res.status(400).json({ error: 'A nova palavra-passe deve ser diferente da palavra-passe atual' });
+    }
+
     const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
     await prisma.user.update({
       where: { id: req.user.id },

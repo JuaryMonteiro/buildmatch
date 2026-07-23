@@ -74,11 +74,17 @@ router.put('/:id/sign', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'Sem permissão para assinar este contrato' });
     }
 
+    if (!req.body.document) {
+      return res.status(400).json({ error: 'Documento assinado é obrigatório' });
+    }
+
     if (isClient) {
       terms.clientSignedAt = new Date().toISOString();
+      terms.clientSignedDocument = req.body.document;
     }
     if (isProf) {
       terms.professionalSignedAt = new Date().toISOString();
+      terms.professionalSignedDocument = req.body.document;
     }
 
     let status = contract.status;
@@ -144,7 +150,7 @@ router.get('/:id/pdf', async (req, res) => {
             project: {
               include: {
                 client: { select: { name: true, email: true } },
-                professional: { include: { user: { select: { name: true } } } }
+                professional: { include: { user: { select: { name: true, email: true } } } }
               }
             }
           }
@@ -157,38 +163,79 @@ router.get('/:id/pdf', async (req, res) => {
     let terms = contract.terms || {};
     if (typeof terms === 'string') terms = JSON.parse(terms);
 
-    const doc = new PDFDocument();
+    const doc = new PDFDocument({ margin: 50 });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=contrato-${contract.id}.pdf`);
     doc.pipe(res);
 
+    const clientName = contract.proposal.project.client.name;
+    const profName = contract.proposal.project.professional.user.name;
+    const projectTitle = contract.proposal.project.title;
+    const amount = contract.proposal.proposedAmount;
+
     // Header
-    doc.fontSize(20).text('CONTRATO DE PRESTAÇÃO DE SERVIÇOS', { align: 'center' });
+    doc.font('Helvetica-Bold').fontSize(14).text('CONTRATO DE PRESTAÇÃO DE SERVIÇOS', { align: 'center' });
+    doc.moveDown(2);
+
+    // Qualificação das Partes
+    doc.font('Helvetica-Bold').fontSize(11).text(`CONTRATANTE: `, { continued: true, align: 'justify', lineGap: 4 });
+    doc.font('Helvetica').text(`${clientName}, doravante denominado simplesmente CONTRATANTE.`);
     doc.moveDown();
 
-    // Parties
-    doc.fontSize(12).text(`Contratante (Cliente): ${contract.proposal.project.client.name}`);
-    doc.text(`Contratado (Profissional): ${contract.proposal.project.professional.user.name}`);
-    doc.text(`Projeto: ${contract.proposal.project.title}`);
-    doc.text(`Valor Acordado: ${contract.proposal.proposedAmount} $00`);
+    doc.font('Helvetica-Bold').text(`CONTRATADO: `, { continued: true, align: 'justify', lineGap: 4 });
+    doc.font('Helvetica').text(`${profName}, atuando na área de ${contract.proposal.project.professional.specialty}, doravante denominado simplesmente CONTRATADO.`);
+    doc.moveDown(1.5);
+
+    doc.text('CONTRATANTE e CONTRATADO, acima nomeados e qualificados, têm entre si justo e acordado o seguinte:', { align: 'justify', lineGap: 4 });
     doc.moveDown();
 
-    // Clauses
-    doc.fontSize(14).text('CLÁUSULAS E CONDIÇÕES:', { underline: true });
+    doc.text(`O CONTRATANTE, como principal responsável, está iniciando a realização da obra/projeto previamente intitulada "${projectTitle}", doravante denominada simplesmente OBRA.`, { align: 'justify', lineGap: 4 });
+    doc.moveDown(2);
+
+    // Cláusulas
+    doc.font('Helvetica-Bold').text('CLÁUSULA PRIMEIRA - DO OBJETO E DAS OBRIGAÇÕES', { align: 'justify', lineGap: 4 });
+    doc.font('Helvetica').text(`Tendo em vista a concepção do mencionado projeto, o CONTRATANTE contrata o CONTRATADO para prestar-lhe os serviços especializados na sua área de atuação.`, { align: 'justify', lineGap: 4 });
+    doc.text(`1.1 A fim de garantir a boa execução do trabalho, o CONTRATADO compromete-se, por este ato, a observar e cumprir o cronograma de atividades da referida OBRA.`, { align: 'justify', lineGap: 4 });
+    doc.text(`1.2 O CONTRATADO assume as responsabilidades inerentes à sua função na OBRA e se dispõe a realizá-la de acordo com os padrões exigidos.`, { align: 'justify', lineGap: 4 });
     doc.moveDown();
 
+    doc.font('Helvetica-Bold').text('CLÁUSULA SEGUNDA – DA REMUNERAÇÃO', { align: 'justify', lineGap: 4 });
+    doc.font('Helvetica').text(`2.1 O CONTRATANTE pagará ao CONTRATADO pelo trabalho a remuneração de ${amount} $00, de acordo com os marcos definidos na plataforma BuildMatch.`, { align: 'justify', lineGap: 4 });
+    doc.moveDown();
+
+    doc.font('Helvetica-Bold').text('CLÁUSULA TERCEIRA – DA RESOLUÇÃO', { align: 'justify', lineGap: 4 });
+    doc.font('Helvetica').text(`3.1 Em caso de extinção do presente contrato, em qualquer uma das formas, os trabalhos já realizados pelo CONTRATADO deverão ser devidamente remunerados, ressalvados os direitos acordados na plataforma.`, { align: 'justify', lineGap: 4 });
+    doc.moveDown();
+
+    doc.font('Helvetica-Bold').text('CLÁUSULA QUARTA – CONVENÇÃO DAS PARTES', { align: 'justify', lineGap: 4 });
+    doc.font('Helvetica').text(`4.1 Este contrato terá vigência a partir de sua assinatura até a finalização da OBRA.`, { align: 'justify', lineGap: 4 });
+    doc.text(`4.2 As partes concordam que este instrumento contém a totalidade dos entendimentos entre as partes. Quaisquer cláusulas adicionais definidas na plataforma:`, { align: 'justify', lineGap: 4 });
+    
     const clauses = terms.defaultClauses || [];
-    clauses.forEach((clause, idx) => {
-      doc.fontSize(10).text(`${idx + 1}. ${clause}`);
+    if (clauses.length > 0) {
       doc.moveDown(0.5);
-    });
+      clauses.forEach((clause, idx) => {
+        doc.text(`- ${clause}`, { align: 'justify', lineGap: 4 });
+      });
+    }
+    
+    doc.moveDown(1.5);
+    doc.text('E por estarem assim, justos e contratados, geram o presente documento em via digital para os devidos fins.', { align: 'justify', lineGap: 4 });
+    doc.moveDown(3);
 
-    doc.moveDown();
-    doc.fontSize(14).text('ASSINATURAS:', { underline: true });
-    doc.moveDown();
+    // Signatures
+    const dateStr = new Date().toLocaleDateString('pt-PT');
+    doc.text(`Local, Data: ________________________, ${dateStr}`, { align: 'right' });
+    doc.moveDown(3);
 
-    doc.fontSize(10).text(`Cliente: ${contract.proposal.project.client.name} ${terms.clientSignedAt ? `(Assinado digitalmente em ${new Date(terms.clientSignedAt).toLocaleString()})` : '(Pendente)'}`);
-    doc.text(`Profissional: ${contract.proposal.project.professional.user.name} ${terms.professionalSignedAt ? `(Assinado digitalmente em ${new Date(terms.professionalSignedAt).toLocaleString()})` : '(Pendente)'}`);
+    const signLine = '__________________________________________';
+    
+    // Draw signature placeholders
+    doc.text(signLine, { align: 'left', continued: true });
+    doc.text(signLine, { align: 'right' });
+    
+    doc.text(`CONTRATANTE: ${clientName}`, { align: 'left', continued: true });
+    doc.text(`CONTRATADO: ${profName}`, { align: 'right' });
 
     doc.end();
   } catch (err) {

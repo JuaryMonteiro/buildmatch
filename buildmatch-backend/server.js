@@ -61,7 +61,8 @@ app.use('/api/contracts',     require('./src/routes/contracts'));
 app.use('/api/milestones',    require('./src/routes/milestones'));
 app.use('/api/payments',      require('./src/routes/payments'));
 app.use('/api/disputes',      require('./src/routes/disputes'));
-
+app.use('/api/categories',    require('./src/routes/categories'));
+app.use('/api/faqs',          require('./src/routes/faqs'));
 
 // ── Socket.IO — Chat em tempo real + Notificações ──────────────────
 io.on('connection', (socket) => {

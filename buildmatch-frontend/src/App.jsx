@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useId } from "react";
 import { io } from "socket.io-client";
 import { authAPI, professionalsAPI, projectsAPI, messagesAPI, schedulesAPI, proposalsAPI, contractsAPI, milestonesAPI, paymentsAPI, disputesAPI, reviewsAPI } from "./services/api";
 import logo from "./assets/logo.png";
@@ -69,14 +69,7 @@ const parseImages = (imageUrls) => {
 };
 const stringifyImages = (arr) => JSON.stringify(arr || []);
 
-const CATEGORIES = [
-  { name: "Pedreiro", img: `${BASE}categories/pedreiro.webp` },
-  { name: "Eletricista", img: `${BASE}categories/eletricista.webp` },
-  { name: "Canalizador", img: `${BASE}categories/canalizador.webp` },
-  { name: "Pintor", img: `${BASE}categories/pintor.webp` },
-  { name: "Carpinteiro", img: `${BASE}categories/carpinteiro.webp` },
-  { name: "Engenheiro", img: `${BASE}categories/engenheiro.webp` },
-];
+// As categorias agora vêm da API (base de dados) e já não são estáticas.
 
 // ============================================================
 // COMPONENTES BASE
@@ -123,13 +116,29 @@ const Btn = ({ children, onClick, variant = "primary", small, full, disabled, st
   );
 };
 
-const Input = ({ label, value, onChange, type = "text", placeholder }) => (
-  <div style={{ marginBottom: 16 }}>
-    {label && <label style={{ fontSize: 13, fontWeight: 600, color: C.dark, display: "block", marginBottom: 6 }}>{label}</label>}
-    <input value={value} onChange={onChange} type={type} placeholder={placeholder}
-      style={{ width: "100%", padding: "12px 14px", border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box", outline: "none" }} />
-  </div>
-);
+const Input = ({ label, value, onChange, type = "text", placeholder, min }) => {
+  const todayStr = new Date().toISOString().split("T")[0];
+  const minVal = min !== undefined ? min : (type === "date" ? todayStr : undefined);
+  return (
+    <div style={{ marginBottom: 16 }}>
+      {label && <label style={{ fontSize: 13, fontWeight: 600, color: C.dark, display: "block", marginBottom: 6 }}>{label}</label>}
+      <input
+        value={value}
+        onChange={(e) => {
+          if (type === "date" && e.target.value && minVal && e.target.value < minVal) {
+            alert("Não é possível selecionar uma data passada.");
+            return;
+          }
+          if (onChange) onChange(e);
+        }}
+        type={type}
+        placeholder={placeholder}
+        min={minVal}
+        style={{ width: "100%", padding: "12px 14px", border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box", outline: "none" }}
+      />
+    </div>
+  );
+};
 
 const Spinner = () => (
   <div style={{ display: "flex", justifyContent: "center", padding: 40 }}>
@@ -143,83 +152,89 @@ const LeafletMap = ({ lat, lng, radius, editable, onCoordsChange }) => {
   const mapRef = useRef(null);
   const markerRef = useRef(null);
   const circleRef = useRef(null);
-  const containerId = useRef("map-" + Math.random().toString(36).substring(2, 9));
+  const mapContainerRef = useRef(null);
 
   useEffect(() => {
-    if (!window.L) {
-      console.warn("Leaflet not loaded yet.");
+    if (!window.L || !mapContainerRef.current) {
       return;
     }
 
-    const defaultLat = parseFloat(lat) || 14.921; // Praia as default
-    const defaultLng = parseFloat(lng) || -23.508;
+    try {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
 
-    // Initialize map
-    const map = window.L.map(containerId.current).setView([defaultLat, defaultLng], 12);
-    mapRef.current = map;
+      const defaultLat = parseFloat(lat) || 14.921; // Praia default
+      const defaultLng = parseFloat(lng) || -23.508;
 
-    // Load OpenStreetMap tiles
-    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-    }).addTo(map);
+      // Initialize map on DOM node ref
+      const map = window.L.map(mapContainerRef.current).setView([defaultLat, defaultLng], 12);
+      mapRef.current = map;
 
-    // Create marker
-    const marker = window.L.marker([defaultLat, defaultLng], {
-      draggable: !!editable
-    }).addTo(map);
-    markerRef.current = marker;
-
-    // Create circle if radius is provided
-    if (radius) {
-      const circle = window.L.circle([defaultLat, defaultLng], {
-        color: '#E05A47',
-        fillColor: '#E05A47',
-        fillOpacity: 0.12,
-        radius: parseFloat(radius) * 1000 // Convert km to meters
+      // Load OpenStreetMap tiles
+      window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
       }).addTo(map);
-      circleRef.current = circle;
+
+      // Create marker
+      const marker = window.L.marker([defaultLat, defaultLng], {
+        draggable: !!editable
+      }).addTo(map);
+      markerRef.current = marker;
+
+      // Create circle if radius is provided
+      if (radius) {
+        const circle = window.L.circle([defaultLat, defaultLng], {
+          color: '#E05A47',
+          fillColor: '#E05A47',
+          fillOpacity: 0.12,
+          radius: parseFloat(radius) * 1000
+        }).addTo(map);
+        circleRef.current = circle;
+      }
+
+      if (editable && onCoordsChange) {
+        marker.on("dragend", () => {
+          const position = marker.getLatLng();
+          onCoordsChange(position.lat, position.lng);
+          if (circleRef.current) circleRef.current.setLatLng(position);
+        });
+
+        map.on("click", (e) => {
+          const { lat, lng } = e.latlng;
+          marker.setLatLng([lat, lng]);
+          onCoordsChange(lat, lng);
+          if (circleRef.current) circleRef.current.setLatLng([lat, lng]);
+        });
+      }
+
+      setTimeout(() => {
+        if (mapRef.current) mapRef.current.invalidateSize();
+      }, 200);
+    } catch (e) {
+      console.warn("LeafletMap error:", e);
     }
-
-    // Handle updates when coordinate changes via drag/click
-    if (editable && onCoordsChange) {
-      marker.on("dragend", () => {
-        const position = marker.getLatLng();
-        onCoordsChange(position.lat, position.lng);
-        if (circleRef.current) {
-          circleRef.current.setLatLng(position);
-        }
-      });
-
-      map.on("click", (e) => {
-        const { lat, lng } = e.latlng;
-        marker.setLatLng([lat, lng]);
-        onCoordsChange(lat, lng);
-        if (circleRef.current) {
-          circleRef.current.setLatLng([lat, lng]);
-        }
-      });
-    }
-
-    // Adjust map sizing
-    setTimeout(() => {
-      if (mapRef.current) mapRef.current.invalidateSize();
-    }, 200);
 
     return () => {
-      map.remove();
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
     };
   }, [lat, lng, editable]);
 
-  // Update circle radius dynamically if changed
   useEffect(() => {
     if (circleRef.current && radius) {
-      circleRef.current.setRadius(parseFloat(radius) * 1000);
+      try {
+        circleRef.current.setRadius(parseFloat(radius) * 1000);
+      } catch (e) {}
     }
   }, [radius]);
 
   return (
     <div style={{ position: "relative", marginBottom: 16 }}>
-      <div id={containerId.current} style={{ height: 260, width: "100%", borderRadius: 12, border: "1px solid #E5E7EB", zIndex: 1 }} />
+      <div ref={mapContainerRef} style={{ height: 260, width: "100%", borderRadius: 12, border: "1px solid #E5E7EB", zIndex: 1 }} />
     </div>
   );
 };
@@ -519,17 +534,8 @@ const ProfCard = ({ prof, onClick }) => {
 // ============================================================
 // SEARCH SUGGESTIONS
 // ============================================================
-const SearchSuggestions = ({ query, onSelect, visible }) => {
-  const SUGGESTIONS = [
-    { label: "Pedreiro", icon: faTools },
-    { label: "Eletricista", icon: faBolt },
-    { label: "Canalizador", icon: faFaucet },
-    { label: "Pintor", icon: faPaintRoller },
-    { label: "Carpinteiro", icon: faTree },
-    { label: "Engenheiro Civil", icon: faDraftingCompass },
-    { label: "Serralheiro", icon: faWrench },
-    { label: "Arquitecto", icon: faDraftingCompass },
-  ];
+const SearchSuggestions = ({ query, onSelect, visible, categories = [] }) => {
+  const SUGGESTIONS = categories.map(c => ({ label: c.name, icon: faSearch }));
 
   const filtered = query
     ? SUGGESTIONS.filter(s => s.label.toLowerCase().includes(query.toLowerCase()))
@@ -840,21 +846,27 @@ const ClientHome = ({ onProfSelect, onSearch, onOpenChat, categories }) => {
       <div style={{ padding: "20px 16px" }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 14 }}>Categorias</h3>
         <div className="categories-grid">
-          {(categories && categories.length > 0 ? categories : CATEGORIES).map((cat, i) => {
-            const imgUrl = cat.img && (cat.img.startsWith("http") || cat.img.startsWith("/"))
-              ? cat.img
-              : `${BASE}${cat.img || ""}`;
+          {(categories && categories.length > 0 ? categories : []).map((cat, i) => {
+            // Detect image type: base64, full URL, relative path, or none
+            const hasImg = cat.img && cat.img.length > 0;
+            const imgSrc = hasImg
+              ? (cat.img.startsWith("data:") || cat.img.startsWith("http") ? cat.img : `${BASE}${cat.img}`)
+              : null;
+            const bgColors = [C.primary, C.accent, "#7C3AED", "#059669", "#DC2626", "#D97706"];
+            const fallbackBg = bgColors[i % bgColors.length];
             return (
-              <div key={i} className="category-card" onClick={() => onSearch(cat.name)}>
-                <img src={imgUrl} alt={cat.name}
-                  onError={e => {
-                    e.target.style.display = "none";
-                    e.target.parentElement.style.background = i % 2 === 0 ? C.primary : C.accent;
-                    const fb = e.target.parentElement.querySelector(".cat-icon-fallback");
-                    if (fb) fb.style.display = "flex";
-                  }}
-                />
-                <div className="cat-icon-fallback" style={{ display: "none", position: "absolute", inset: 0, alignItems: "center", justifyContent: "center" }}>
+              <div key={i} className="category-card" onClick={() => onSearch(cat.name)}
+                style={!imgSrc ? { background: fallbackBg } : {}}
+              >
+                {imgSrc && (
+                  <img src={imgSrc} alt={cat.name}
+                    onError={e => {
+                      e.target.style.display = "none";
+                      e.target.parentElement.style.background = fallbackBg;
+                    }}
+                  />
+                )}
+                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", opacity: imgSrc ? 0 : 1 }}>
                   <Icon icon={categoryIconMap[cat.name] || faTools} size={32} color="rgba(255,255,255,0.8)" />
                 </div>
                 <div className="overlay" />
@@ -1650,6 +1662,7 @@ const ClientProfile = ({ user, onLogout, onUpdate, initialSection, onSectionChan
       setError("");
       if (!currentPass || !newPass || !confirmPass) { setError("Preencha todos os campos"); return; }
       if (newPass !== confirmPass) { setError("As novas passwords não coincidem"); return; }
+      if (currentPass === newPass) { setError("A nova palavra-passe deve ser diferente da atual"); return; }
       if (newPass.length < 6) { setError("Mínimo 6 caracteres"); return; }
       setSaving(true);
       try {
@@ -1698,13 +1711,14 @@ const ClientProfile = ({ user, onLogout, onUpdate, initialSection, onSectionChan
 
   const Help = () => {
     const [openFaq, setOpenFaq] = useState(null);
-    const faqs = [
-      { q: "Como posso contratar um profissional?", a: "Pesquise o serviço, veja os perfis e clique em Agendar ou Mensagem." },
-      { q: "Como funcionam as avaliações?", a: "Após conclusão, pode avaliar com 1 a 5 estrelas. Só clientes que contrataram podem avaliar." },
-      { q: "Posso cancelar um agendamento?", a: "Sim, pode cancelar agendamentos pendentes pelo chat." },
-      { q: "Como altero os meus dados?", a: "Perfil → Editar Perfil." },
-      { q: "Os meus dados estão seguros?", a: "Sim, todos os dados são encriptados e protegidos." },
-    ];
+    const [faqs, setFaqs] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      import("./services/api").then(({ faqsAPI }) => {
+        faqsAPI.list("CLIENT").then(res => setFaqs(res.data || [])).finally(() => setLoading(false));
+      });
+    }, []);
     return (
       <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
@@ -1721,13 +1735,13 @@ const ClientProfile = ({ user, onLogout, onUpdate, initialSection, onSectionChan
           ))}
         </div>
         <h3 style={{ fontSize: 15, fontWeight: 700, color: C.dark, marginBottom: 12 }}>Perguntas frequentes</h3>
-        {faqs.map((faq, i) => (
+        {loading ? <Spinner /> : faqs.length === 0 ? <p style={{color: C.gray}}>Nenhuma pergunta frequente encontrada.</p> : faqs.map((faq, i) => (
           <div key={i} style={{ background: C.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", marginBottom: 8 }}>
             <div onClick={() => setOpenFaq(openFaq === i ? null : i)} style={{ padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
-              <span style={{ fontWeight: 600, color: C.dark, fontSize: 13, flex: 1, paddingRight: 10 }}>{faq.q}</span>
-              <Icon icon={faChevronDown} size={12} color={C.primary} style={{ transform: openFaq === i ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
+              <span style={{ fontWeight: 600, color: C.dark, fontSize: 13, flex: 1, paddingRight: 10 }}>{faq.question}</span>
+              <Icon icon={openFaq === i ? faChevronUp : faChevronDown} size={12} color={C.gray} />
             </div>
-            {openFaq === i && <div style={{ padding: "0 16px 14px", color: C.gray, fontSize: 13, lineHeight: 1.6, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>{faq.a}</div>}
+            {openFaq === i && <div style={{ padding: "0 16px 14px", color: C.gray, fontSize: 13, lineHeight: 1.5 }}>{faq.answer}</div>}
           </div>
         ))}
         <Card style={{ marginTop: 20, background: `${C.primary}08`, border: `1px solid ${C.primary}20` }}>
@@ -2612,7 +2626,7 @@ const ProfProfile = ({ user, onLogout, onUpdate, initialSection, onSectionChange
       }
       setGeocoding(true);
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encod$00IComponent(query)}&limit=1`);
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
         const data = await res.json();
         if (data && data.length > 0) {
           const first = data[0];
@@ -2801,7 +2815,7 @@ const ProfProfile = ({ user, onLogout, onUpdate, initialSection, onSectionChange
                     setLatitude(lat);
                     setLongitude(lng);
                     updateAddressFromCoords(lat, lng);
-                  }, (err) => {
+                  }, () => {
                     alert("Não foi possível obter a sua localização GPS.");
                   });
                 } else {
@@ -2870,6 +2884,7 @@ const ProfProfile = ({ user, onLogout, onUpdate, initialSection, onSectionChange
       setError("");
       if (!currentPass || !newPass || !confirmPass) { setError("Preencha todos os campos"); return; }
       if (newPass !== confirmPass) { setError("As novas passwords não coincidem"); return; }
+      if (currentPass === newPass) { setError("A nova palavra-passe deve ser diferente da atual"); return; }
       if (newPass.length < 6) { setError("Mínimo 6 caracteres"); return; }
       setSaving(true);
       try {
@@ -3087,13 +3102,14 @@ const ProfProfile = ({ user, onLogout, onUpdate, initialSection, onSectionChange
 
   const Help = () => {
     const [openFaq, setOpenFaq] = useState(null);
-    const faqs = [
-      { q: "Como apareço nas pesquisas?", a: "Active 'Disponível para serviços' no Editar Perfil." },
-      { q: "Como aceito um projecto?", a: "Projectos → Pendentes → Aceitar." },
-      { q: "Como respondo a uma avaliação?", a: "Perfil → Avaliações Recebidas → Responder." },
-      { q: "Como adiciono fotos ao portfólio?", a: "Portfólio → Adicionar." },
-      { q: "Como gestão os horários?", a: "Agenda → Adicionar horário." },
-    ];
+    const [faqs, setFaqs] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      import("./services/api").then(({ faqsAPI }) => {
+        faqsAPI.list("PROFESSIONAL").then(res => setFaqs(res.data || [])).finally(() => setLoading(false));
+      });
+    }, []);
     return (
       <div style={{ padding: "20px 16px", fontFamily: "'DM Sans', sans-serif" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
@@ -3110,13 +3126,13 @@ const ProfProfile = ({ user, onLogout, onUpdate, initialSection, onSectionChange
           ))}
         </div>
         <h3 style={{ fontSize: 15, fontWeight: 700, color: C.dark, marginBottom: 12 }}>Perguntas frequentes</h3>
-        {faqs.map((faq, i) => (
+        {loading ? <Spinner /> : faqs.length === 0 ? <p style={{color: C.gray}}>Nenhuma pergunta frequente encontrada.</p> : faqs.map((faq, i) => (
           <div key={i} style={{ background: C.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", marginBottom: 8 }}>
             <div onClick={() => setOpenFaq(openFaq === i ? null : i)} style={{ padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
-              <span style={{ fontWeight: 600, color: C.dark, fontSize: 13, flex: 1, paddingRight: 10 }}>{faq.q}</span>
-              <Icon icon={faChevronDown} size={12} color={C.accent} style={{ transform: openFaq === i ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
+              <span style={{ fontWeight: 600, color: C.dark, fontSize: 13, flex: 1, paddingRight: 10 }}>{faq.question}</span>
+              <Icon icon={openFaq === i ? faChevronUp : faChevronDown} size={12} color={C.gray} />
             </div>
-            {openFaq === i && <div style={{ padding: "0 16px 14px", color: C.gray, fontSize: 13, lineHeight: 1.6, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>{faq.a}</div>}
+            {openFaq === i && <div style={{ padding: "0 16px 14px", color: C.gray, fontSize: 13, lineHeight: 1.5 }}>{faq.answer}</div>}
           </div>
         ))}
         <Card style={{ marginTop: 20, background: `${C.accent}08`, border: `1px solid ${C.accent}20` }}>
@@ -3252,6 +3268,7 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
 
   const [disputeDesc, setDisputeDesc] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [signedContractFile, setSignedContractFile] = useState(null);
 
   // Review states
   const [ratingVal, setRatingVal] = useState(5);
@@ -3462,15 +3479,27 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
 
   // ── Ações do Contrato ─────────────────────────────
   const signContract = async () => {
-    if (!contract) return;
+    if (!contract || !signedContractFile) return;
     setSubmitting(true);
     try {
-      await contractsAPI.sign(contract.id);
+      await contractsAPI.sign(contract.id, signedContractFile);
+      setSignedContractFile(null);
       await loadProjectData();
     } catch (err) {
       alert(err.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleSignContractUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setSignedContractFile(ev.target.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -3639,7 +3668,6 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
   const projectDescription = conversation.description || "";
   const projectBudget = conversation.budgetAmount || conversation.amount || null;
   const projectDeadline = conversation.budgetDeadline || conversation.startDate || null;
-  const hasNoPropsal = !proposal && isPro;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: embedded ? "100%" : "100vh", fontFamily: "'DM Sans', sans-serif", background: C.lightGray }}>
@@ -3655,13 +3683,13 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
             {isPro && <Icon icon={faClipboardList} size={10} color="rgba(255,255,255,0.6)" />} {subtitle}
           </div>}
         </div>
-        {/* Professional: quick shortcut to send quote */}
-        {isPro && !proposal && (
+        {/* Professional: quick shortcut to create agreement */}
+        {isPro && (
           <button
-            onClick={() => { if (chatTab !== "project") { setChatTab("project"); loadProjectData(); } }}
-            style={{ background: C.accent, border: "none", color: "#fff", padding: "6px 12px", borderRadius: 20, cursor: "pointer", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}
+            onClick={() => { setChatTab("project"); loadProjectData(); }}
+            style={{ background: C.accent, border: "none", color: "#fff", padding: "8px 14px", borderRadius: 20, cursor: "pointer", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, display: "flex", alignItems: "center", gap: 6 }}
           >
-            Enviar Orçamento
+            <Icon icon={faClipboardList} size={12} color="#fff" /> {proposal ? "Ver Acordo" : "🤝 Criar Acordo"}
           </button>
         )}
         {!isPro && <div style={{ width: 10, height: 10, background: C.success, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.3)", flexShrink: 0 }} />}
@@ -3698,23 +3726,23 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
       {/* Content */}
       {chatTab === "messages" ? (
         <>
-          {/* Banner para profissional sem proposta enviada */}
-          {isPro && !loadingProject && !proposal && (
+          {/* Banner para profissional criar acordo */}
+          {isPro && !loadingProject && (
             <div style={{ background: `linear-gradient(135deg, ${C.accent}15, ${C.accent}05)`, borderBottom: `2px solid ${C.accent}30`, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
               <Icon icon={faClipboardList} size={20} color={C.accent} />
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: C.dark }}>Pedido de Orçamento Recebido</div>
-                <div style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>{projectTitle}</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: C.dark }}>{proposal ? "Acordo do Projeto Ativo" : "Criar Acordo com o Cliente"}</div>
+                <div style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>{projectTitle || "Defina os termos, prazo e valor acordados"}</div>
               </div>
               <button
                 onClick={() => { setChatTab("project"); loadProjectData(); }}
                 style={{ background: C.accent, border: "none", color: "#fff", padding: "8px 14px", borderRadius: 20, cursor: "pointer", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}
               >
-                Responder
+                {proposal ? "Ver Acordo" : "🤝 Criar Acordo"}
               </button>
             </div>
           )}
-          <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 8px", display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 8px", display: "flex", flexDirection: "column", gap: 10 }}>
             {loading ? <Spinner /> : (
               <>
                 {messages.length === 0 && (
@@ -3726,16 +3754,36 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
                 )}
                 {messages.map((msg, i) => {
                   const isMe = msg.senderId === user?.id;
+                  const senderName = isMe ? "Você" : (msg.sender?.name || name);
                   const showAvatar = !isMe && (i === 0 || messages[i - 1]?.senderId !== msg.senderId);
+                  
+                  // Simple date divider logic
+                  const currentDate = new Date(msg.createdAt).toLocaleDateString("pt-PT");
+                  const prevDate = i > 0 ? new Date(messages[i - 1].createdAt).toLocaleDateString("pt-PT") : null;
+                  const showDateDivider = i === 0 || currentDate !== prevDate;
+
                   return (
-                    <div key={msg.id} style={{ display: "flex", justifyContent: isMe ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 8 }}>
-                      {!isMe && <div style={{ width: 28, flexShrink: 0 }}>{showAvatar && <Avatar name={name} size={28} src={peerAvatar} />}</div>}
-                      <div style={{ maxWidth: "72%" }}>
-                        <div style={{ padding: "10px 14px", borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: isMe ? (isPro ? "#1a1a2e" : C.primary) : C.white, color: isMe ? "#fff" : C.dark, fontSize: 14, lineHeight: 1.5, boxShadow: "0 1px 4px rgba(0,0,0,0.08)", opacity: msg.sending ? 0.7 : 1 }}>
-                          {msg.content}
+                    <div key={msg.id || i} style={{ display: "flex", flexDirection: "column" }}>
+                      {showDateDivider && (
+                        <div style={{ display: "flex", justifyContent: "center", margin: "12px 0 8px" }}>
+                          <span style={{ background: C.border, color: C.gray, fontSize: 11, fontWeight: 700, padding: "3px 12px", borderRadius: 12 }}>
+                            {currentDate === new Date().toLocaleDateString("pt-PT") ? "Hoje" : currentDate}
+                          </span>
                         </div>
-                        <div style={{ fontSize: 10, color: C.gray, marginTop: 3, textAlign: isMe ? "right" : "left" }}>
-                          {msg.sending ? "A enviar..." : new Date(msg.createdAt).toLocaleTimeString("pt", { hour: "2-digit", minute: "2-digit" })}
+                      )}
+                      <div style={{ display: "flex", justifyContent: isMe ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 8 }}>
+                        {!isMe && <div style={{ width: 30, flexShrink: 0 }}>{showAvatar && <Avatar name={name} size={30} src={peerAvatar} />}</div>}
+                        <div style={{ maxWidth: "75%" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: isMe ? C.accent : C.gray, marginBottom: 3, textAlign: isMe ? "right" : "left", paddingLeft: isMe ? 0 : 4, paddingRight: isMe ? 4 : 0 }}>
+                            {senderName}
+                          </div>
+                          <div style={{ padding: "10px 14px", borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: isMe ? (isPro ? "#1a1a2e" : C.primary) : C.white, color: isMe ? "#fff" : C.dark, fontSize: 14, lineHeight: 1.5, boxShadow: "0 1px 4px rgba(0,0,0,0.08)", opacity: msg.sending ? 0.7 : 1, border: isMe ? "none" : `1px solid ${C.border}` }}>
+                            {msg.content}
+                          </div>
+                          <div style={{ fontSize: 10, color: C.gray, marginTop: 3, textAlign: isMe ? "right" : "left", display: "flex", alignItems: "center", justifyContent: isMe ? "flex-end" : "flex-start", gap: 4 }}>
+                            <span>{msg.sending ? "A enviar..." : new Date(msg.createdAt).toLocaleTimeString("pt", { hour: "2-digit", minute: "2-digit" })}</span>
+                            {isMe && <Icon icon={faCheck} size={10} color={C.accent} />}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -3743,7 +3791,7 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
                 })}
                 {peerTyping && (
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ width: 28, flexShrink: 0 }}><Avatar name={name} size={28} src={peerAvatar} /></div>
+                    <div style={{ width: 30, flexShrink: 0 }}><Avatar name={name} size={30} src={peerAvatar} /></div>
                     <div style={{ padding: "10px 14px", borderRadius: "18px 18px 18px 4px", background: C.white, boxShadow: "0 1px 4px rgba(0,0,0,0.08)", display: "flex", gap: 4 }}>
                       {[0, 1, 2].map(i => (
                         <span key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: C.gray, opacity: 0.6, animation: `typingDot 1s ${i * 0.15}s infinite ease-in-out` }} />
@@ -4197,21 +4245,25 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                       <span>Cliente:</span>
                       <span style={{ fontWeight: 600, color: contract.terms?.clientSignedAt ? C.success : C.error, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                        {contract.terms?.clientSignedAt ? (<><Icon icon={faCheck} size={11} color={C.success} /> Assinado</>) : "Pendente"}
+                        {contract.terms?.clientSignedAt ? (<><Icon icon={faCheck} size={11} color={C.success} /> Assinado {contract.terms?.clientSignedDocument && <a href={contract.terms.clientSignedDocument} target="_blank" rel="noreferrer" style={{ fontSize: 11, marginLeft: 4 }}>(Ver Doc)</a>}</>) : "Pendente"}
                       </span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
                       <span>Profissional:</span>
                       <span style={{ fontWeight: 600, color: contract.terms?.professionalSignedAt ? C.success : C.error, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                        {contract.terms?.professionalSignedAt ? (<><Icon icon={faCheck} size={11} color={C.success} /> Assinado</>) : "Pendente"}
+                        {contract.terms?.professionalSignedAt ? (<><Icon icon={faCheck} size={11} color={C.success} /> Assinado {contract.terms?.professionalSignedDocument && <a href={contract.terms.professionalSignedDocument} target="_blank" rel="noreferrer" style={{ fontSize: 11, marginLeft: 4 }}>(Ver Doc)</a>}</>) : "Pendente"}
                       </span>
                     </div>
 
-                    {/* Button to Sign */}
+                    {/* Formulário de Envio do Contrato Assinado */}
                     {((!isPro && !contract.terms?.clientSignedAt) || (isPro && !contract.terms?.professionalSignedAt)) && (
-                      <Btn onClick={signContract} variant="accent" full disabled={submitting}>
-                        Assinar Digitalmente o Contrato
-                      </Btn>
+                      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10, background: C.lightGray, padding: 12, borderRadius: 8 }}>
+                        <label style={{ fontSize: 12, fontWeight: 700, color: C.dark }}>Anexar Contrato Assinado (PDF/Imagem):</label>
+                        <input type="file" accept="image/*,.pdf" onChange={handleSignContractUpload} style={{ fontSize: 13, background: C.white, padding: "8px", borderRadius: "6px", border: `1px solid ${C.border}` }} />
+                        <Btn onClick={signContract} variant="accent" full disabled={submitting || !signedContractFile}>
+                          Enviar Documento Assinado
+                        </Btn>
+                      </div>
                     )}
                   </div>
                 </Card>
@@ -4336,6 +4388,26 @@ const ChatScreen = ({ conversation, user, onBack, embedded = false }) => {
                           {viewingProofId === p.id && p.proof && (
                             <div style={{ marginTop: 10, border: `1px solid ${C.border}`, borderRadius: 8, padding: 6, background: C.lightGray }}>
                               <img src={p.proof} alt="Comprovativo" style={{ width: "100%", borderRadius: 6 }} />
+                            </div>
+                          )}
+
+                          {p.status === "REJECTED" && !isPro && (
+                            <div style={{ marginTop: 10, padding: 10, background: "#FEE2E2", borderRadius: 8, border: `1px solid ${C.error}` }}>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: C.error, marginBottom: 6 }}>
+                                ⚠️ Comprovativo rejeitado pelo profissional. Submeta um novo comprovativo válido.
+                              </div>
+                              <Btn
+                                onClick={() => {
+                                  setPaymentAmount(String(p.amount));
+                                  setPaymentMilestoneId(p.milestoneId || "");
+                                  setPaymentProof("");
+                                }}
+                                variant="danger"
+                                small
+                                full
+                              >
+                                🔁 Reenviar comprovativo
+                              </Btn>
                             </div>
                           )}
 
@@ -4471,19 +4543,31 @@ const ProfessionalProfile = ({ prof, onBack, onMessage, onSchedule }) => {
               <div key={i}><div style={{ fontWeight: 800, color: C.primary, fontSize: 14 }}>{v}</div><div style={{ fontSize: 11, color: C.gray }}>{l}</div></div>
             ))}
           </div>
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${C.border}`, textAlign: "center" }}>
+            <button
+              onClick={() => setTab("portfolio")}
+              style={{ background: "none", border: "none", color: C.primary, fontWeight: 700, fontSize: 13, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
+            >
+              <Icon icon={faImages} size={14} color={C.primary} />
+              📁 Ver Portfólio do Profissional ({(data.portfolio || []).length} trabalhos) →
+            </button>
+          </div>
         </Card>
         <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-          <button onClick={onMessage} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", background: "transparent", color: C.primary, border: `2px solid ${C.primary}`, borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>
-            <Icon icon={faComments} size={16} color={C.primary} /> Mensagem
+          <button onClick={onMessage} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px", background: "transparent", color: C.primary, border: `2px solid ${C.primary}`, borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}>
+            <Icon icon={faComments} size={15} color={C.primary} /> Mensagem
           </button>
-          <button onClick={onSchedule} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", background: C.accent, color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>
-            <Icon icon={faCalendarAlt} size={16} color="#fff" /> Agendar
+          <button onClick={() => setTab("portfolio")} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px", background: C.primary, color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}>
+            <Icon icon={faImages} size={15} color="#fff" /> Portfólio
+          </button>
+          <button onClick={onSchedule} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px", background: C.accent, color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}>
+            <Icon icon={faCalendarAlt} size={15} color="#fff" /> Agendar
           </button>
         </div>
         <div style={{ display: "flex", gap: 4, borderBottom: `2px solid ${C.border}`, marginBottom: 20 }}>
           {["about", "portfolio", "reviews"].map(t => (
             <button key={t} onClick={() => setTab(t)} style={{ padding: "10px 18px", border: "none", background: "transparent", cursor: "pointer", fontWeight: 600, fontSize: 14, fontFamily: "'DM Sans', sans-serif", color: tab === t ? C.primary : C.gray, borderBottom: `2px solid ${tab === t ? C.primary : "transparent"}`, marginBottom: -2 }}>
-              {t === "about" ? "Sobre" : t === "portfolio" ? "Portfólio" : "Avaliações"}
+              {t === "about" ? "Sobre" : t === "portfolio" ? `Portfólio (${(data.portfolio || []).length})` : "Avaliações"}
             </button>
           ))}
         </div>
@@ -4525,6 +4609,14 @@ const ProfessionalProfile = ({ prof, onBack, onMessage, onSchedule }) => {
                     }
                     <div style={{ fontWeight: 600, color: C.dark }}>{item.title}</div>
                     {item.description && <div style={{ color: C.gray, fontSize: 13, marginTop: 4 }}>{item.description}</div>}
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+                      <button onClick={(e) => {
+                        e.stopPropagation();
+                        if (onMessage) onMessage();
+                      }} style={{ width: "100%", padding: "10px", background: C.primary, color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13, fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                        <Icon icon={faClipboardList} size={14} color="#fff" /> Pedir orçamento
+                      </button>
+                    </div>
                   </Card>
                   );
                 })
@@ -4805,13 +4897,10 @@ useEffect(() => {
     }
   }
 
-  import("./services/api").then(({ professionalsAPI }) => {
-    professionalsAPI.getMeta()
-      .then(res => {
-        if (res.categories) setCategories(res.categories);
-        if (res.specialties) setSpecialties(res.specialties);
-      })
-      .catch(err => console.error("Erro ao obter especialidades/categorias do backend:", err));
+  import("./services/api").then(({ categoriesAPI }) => {
+    categoriesAPI.list()
+      .then(res => setCategories(res.data || []))
+      .catch(err => console.error("Erro ao obter categorias do backend:", err));
   });
 }, []);
 
@@ -5027,16 +5116,12 @@ if (isPendingProVerification) {
   );
 }
 const VerifyEmailScreen = () => {
-  const [status, setStatus] = useState("loading"); // loading | error
-  const [msg, setMsg] = useState("");
+  const token = new URLSearchParams(window.location.search).get("token");
+  const [status, setStatus] = useState(token ? "loading" : "error"); // loading | error
+  const [msg, setMsg] = useState(token ? "" : "Link inválido.");
 
   useEffect(() => {
-    const token = new URLSearchParams(window.location.search).get("token");
-    if (!token) {
-      setStatus("error");
-      setMsg("Link inválido.");
-      return;
-    }
+    if (!token) return;
 
     fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/verify-email?token=${token}`)
       .then(r => r.json().then(data => ({ ok: r.ok, data })))
@@ -5155,8 +5240,7 @@ const AdminNav = ({ active, onChange }) => (
       ["projects", faClipboardList, "Projectos"],
       ["reviews", faStar, "Avaliações"],
       ["portfolios", faHardHat, "Portfólios"],
-      ["comments", faComments, "Comentários"],
-      ["lowRatings", faExclamationCircle, "Avaliação"],
+      ["categories", faCog, "Categorias"],
       ["verifications", faShieldAlt, "Verificações"],
       ["alerts", faBell, "Alertas"],
       ["audit", faShieldAlt, "Auditoria"],
@@ -5260,6 +5344,7 @@ const AdminProfile = ({ user, onLogout, onUpdate, initialSection, onSectionChang
       setError("");
       if (!currentPass || !newPass || !confirmPass) { setError("Preencha todos os campos"); return; }
       if (newPass !== confirmPass) { setError("As novas passwords não coincidem"); return; }
+      if (currentPass === newPass) { setError("A nova palavra-passe deve ser diferente da atual"); return; }
       if (newPass.length < 8) { setError("Mínimo 8 caracteres"); return; }
       setSaving(true);
       try {

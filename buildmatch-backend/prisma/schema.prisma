@@ -369,3 +369,19 @@ model Dispute {
   milestone Milestone? @relation(fields: [milestoneId], references: [id])
   raisedBy  User       @relation("UserDisputesRaised", fields: [raisedById], references: [id])
 }
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  img       String?  // Base64 image or URL
+  icon      String?  // FontAwesome icon name (e.g. "faTools")
+  createdAt DateTime @default(now())
+}
+
+model FAQ {
+  id        String   @id @default(uuid())
+  question  String
+  answer    String
+  type      String   // "CLIENT", "PROFESSIONAL", or "BOTH"
+  createdAt DateTime @default(now())
+}

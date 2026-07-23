@@ -392,7 +392,7 @@ router.get('/comments', async (req, res) => {
         orderBy: { createdAt: 'desc' },
         include: {
           author: { select: { id: true, name: true } },
-          professional: { select: { id: true, specialty: true, user: { select: { name: true } } } },
+          professional: { select: { id: true, specialty: true, userId: true, user: { select: { id: true, name: true, active: true } } } },
         },
       }),
     ]);
@@ -792,6 +792,75 @@ router.post('/professionals/:id/reject', async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Erro ao rejeitar profissional' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════
+// CONVERSAS / MENSAGENS (MONITORIZAÇÃO DO ADMIN)
+// ══════════════════════════════════════════════════════════
+router.get('/messages/conversations', async (req, res) => {
+  try {
+    const projects = await prisma.project.findMany({
+      include: {
+        client: { select: { id: true, name: true, avatar: true, email: true } },
+        professional: { include: { user: { select: { id: true, name: true, avatar: true, email: true } } } },
+        messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const map = new Map();
+    for (const p of projects) {
+      if (!p.client || !p.professional) continue;
+      const pairKey = `${p.clientId}_${p.professional.id}`;
+      if (!map.has(pairKey)) {
+        map.set(pairKey, p);
+      } else {
+        const existing = map.get(pairKey);
+        const existingMsgDate = existing.messages[0]?.createdAt ? new Date(existing.messages[0].createdAt).getTime() : 0;
+        const newMsgDate = p.messages[0]?.createdAt ? new Date(p.messages[0].createdAt).getTime() : 0;
+        if (newMsgDate > existingMsgDate) {
+          map.set(pairKey, p);
+        }
+      }
+    }
+
+    res.json({ data: Array.from(map.values()) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao obter conversas' });
+  }
+});
+
+router.get('/messages/project/:projectId', async (req, res) => {
+  try {
+    const targetProject = await prisma.project.findUnique({
+      where: { id: req.params.projectId },
+      include: { professional: true }
+    });
+
+    let projectIds = [req.params.projectId];
+    if (targetProject) {
+      const relatedProjects = await prisma.project.findMany({
+        where: { clientId: targetProject.clientId, professionalId: targetProject.professionalId },
+        select: { id: true }
+      });
+      projectIds = relatedProjects.map(p => p.id);
+    }
+
+    const messages = await prisma.message.findMany({
+      where: { projectId: { in: projectIds } },
+      include: { sender: { select: { id: true, name: true, avatar: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    res.json({ data: messages });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao obter mensagens da conversa' });
   }
 });
 

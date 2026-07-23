@@ -5,7 +5,8 @@ import {
   faStar, faMoneyBillWave, faSignOutAlt, faSearch, faTimes,
   faCheck, faBan, faTrash, faChevronLeft, faChevronRight,
   faExclamationTriangle, faShieldAlt, faEnvelopeCircleCheck,
-  faGauge, faHardHat, faClock, faBell, faPlus,
+  faGauge, faHardHat, faClock, faBell, faPlus, faComments,
+  faList, faQuestionCircle, faEdit, faSave
 } from "@fortawesome/free-solid-svg-icons";
 
 // -------------------------------------------------------------------
@@ -15,13 +16,14 @@ const TABS = [
   { id: "overview", label: "Visão geral", icon: faGauge },
   { id: "users", label: "Utilizadores", icon: faUsers },
   { id: "projects", label: "Projectos", icon: faClipboardList },
+  { id: "conversations", label: "Conversas / Mensagens", icon: faComments },
   { id: "reviews", label: "Avaliações", icon: faStar },
   { id: "portfolios", label: "Portfolios", icon: faHardHat },
-  { id: "comments", label: "Comentários", icon: faEnvelopeCircleCheck },
-  { id: "lowRatings", label: "Avaliação", icon: faExclamationTriangle },
   { id: "verifications", label: "Verificações", icon: faShieldAlt },
   { id: "alerts", label: "Alertas", icon: faBell },
   { id: "audit", label: "Auditoria", icon: faShieldAlt },
+  { id: "categories", label: "Categorias", icon: faList },
+  { id: "faqs", label: "FAQs", icon: faQuestionCircle },
 ];
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
@@ -477,19 +479,24 @@ const ProjectsPanel = () => {
 };
 
 // ============================================================
-// AVALIAÇÕES (moderação)
+// AVALIAÇÕES
 // ============================================================
 const ReviewsPanel = () => {
   const [reviews, setReviews] = useState([]);
   const [loading, setL] = useState(true);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
-  const [confirmAction, setConfirmAction] = useState(null);
+  const [search, setSearch] = useState("");
+  const [ratingFilter, setRatingFilter] = useState("");
+  const [confirmAction, setConfirmAction] = useState(null); // { id } for delete, { userId, name, active } for suspend
 
   const load = useCallback(() => {
     setL(true);
-    adminFetch(`/reviews?page=${page}&limit=15`).then(d => { setReviews(d.data); setPages(d.pages); }).finally(() => setL(false));
-  }, [page]);
+    const params = new URLSearchParams({ page, limit: 15, ...(search ? { search } : {}), ...(ratingFilter ? { rating: ratingFilter } : {}) });
+    adminFetch(`/comments?${params}`) // Using /comments since it supports search and rating filtering
+      .then(d => { setReviews(d.data); setPages(d.pages); })
+      .finally(() => setL(false));
+  }, [page, search, ratingFilter]);
 
   useEffect(() => {
     const t = setTimeout(() => load(), 0);
@@ -504,31 +511,213 @@ const ReviewsPanel = () => {
     } catch (e) { alert(e.message); }
   };
 
+  const suspend = async (userId, currentActive) => {
+    try {
+      await adminFetch(`/users/${userId}/status`, { method: "PUT", body: JSON.stringify({ active: !currentActive }) });
+      setReviews(prev => prev.map(r => 
+        r.professional?.user?.id === userId 
+          ? { ...r, professional: { ...r.professional, user: { ...r.professional.user, active: !currentActive } } } 
+          : r
+      ));
+      setConfirmAction(null);
+    } catch (e) { alert(e.message); }
+  };
+
   if (loading) return <Spinner />;
 
   return (
     <div>
-      {reviews.map(r => (
-        <Card key={r.id} style={{ marginBottom: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+      <div className="admin-toolbar">
+        <div className="admin-search-box">
+          <Icon icon={faSearch} size={14} color={C.gray} />
+          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Pesquisar por texto ou autor..." />
+          {search && <button onClick={() => setSearch("")} className="admin-clear-btn"><Icon icon={faTimes} size={12} color={C.gray} /></button>}
+        </div>
+        <select value={ratingFilter} onChange={e => { setRatingFilter(e.target.value); setPage(1); }} className="admin-select">
+          <option value="">Todas as estrelas</option>
+          <option value="1">1 estrela (Critico)</option>
+          <option value="2">2 estrelas</option>
+          <option value="3">3 estrelas</option>
+          <option value="4">4 estrelas</option>
+          <option value="5">5 estrelas</option>
+        </select>
+      </div>
+
+      {reviews.map(r => {
+        const isLowRating = r.rating < 3;
+        const profUser = r.professional?.user;
+        return (
+        <Card key={r.id} style={{ marginBottom: 14, borderLeft: `4px solid ${isLowRating ? C.error : "#F59E0B"}` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
             <div>
               <div style={{ fontWeight: 700, color: C.dark, fontSize: 14 }}>{r.author?.name}</div>
-              <div style={{ color: C.gray, fontSize: 12 }}>avaliou {r.professional?.user?.name} ({r.professional?.specialty})</div>
+              <div style={{ color: C.gray, fontSize: 12 }}>Avaliação para {profUser?.name} ({r.professional?.specialty})</div>
             </div>
-            <button className="admin-icon-btn danger" onClick={() => setConfirmAction({ id: r.id })}>
-              <Icon icon={faTrash} size={13} color={C.error} />
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ background: isLowRating ? "#FEE2E2" : "#FEF3C7", padding: "4px 10px", borderRadius: 20, display: "flex", alignItems: "center", gap: 6 }}>
+                {[1, 2, 3, 4, 5].map(i => <Icon key={i} icon={faStar} size={12} color={i <= r.rating ? (isLowRating ? C.error : "#F59E0B") : C.border} />)}
+                <span style={{ fontWeight: 800, fontSize: 12, color: isLowRating ? C.error : "#D97706" }}>{r.rating}/5</span>
+              </div>
+              
+              {profUser && profUser.id && (
+                <button
+                  className="admin-icon-btn"
+                  title={profUser.active === false ? "Reactivar Profissional" : "Suspender Profissional"}
+                  onClick={() => setConfirmAction({ userId: profUser.id, name: profUser.name, active: profUser.active })}
+                >
+                  <Icon icon={profUser.active === false ? faCheck : faBan} size={13} color={profUser.active === false ? C.success : "#D97706"} />
+                </button>
+              )}
+              <button className="admin-icon-btn danger" title="Eliminar Avaliação" onClick={() => setConfirmAction({ id: r.id })}>
+                <Icon icon={faTrash} size={13} color={C.error} />
+              </button>
+            </div>
           </div>
-          <div style={{ marginTop: 8 }}>
-            {[1, 2, 3, 4, 5].map(i => <Icon key={i} icon={faStar} size={13} color={i <= r.rating ? "#F59E0B" : C.border} />)}
+          <div style={{ background: C.lightGray, padding: "12px 14px", borderRadius: 10, border: `1px solid ${isLowRating ? "#FECACA" : C.border}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: isLowRating ? C.error : C.gray, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                {isLowRating ? "⚠️ Motivo da baixa avaliação" : "Comentário"}
+              </div>
+            </div>
+            <p style={{ color: C.dark, fontSize: 13, lineHeight: 1.6, margin: 0 }}>{r.comment || "Sem comentário escrito."}</p>
+            {r.reply && (
+              <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px dashed ${C.border}`, fontSize: 12, color: C.gray }}>
+                <strong>Resposta do profissional:</strong> {r.reply}
+              </div>
+            )}
           </div>
-          <p style={{ color: C.gray, fontSize: 13, lineHeight: 1.6, margin: "8px 0 0", background: C.lightGray, padding: "10px 12px", borderRadius: 10 }}>{r.comment}</p>
         </Card>
-      ))}
+      )})}
       {reviews.length === 0 && <p style={{ textAlign: "center", color: C.gray, padding: 32 }}>Nenhuma avaliação encontrada</p>}
       <Pagination page={page} pages={pages} onChange={setPage} />
-      {confirmAction && (
+      {confirmAction && confirmAction.id && (
         <ConfirmModal text="Eliminar esta avaliação? A média do profissional será recalculada." onCancel={() => setConfirmAction(null)} onConfirm={() => remove(confirmAction.id)} />
+      )}
+      {confirmAction && confirmAction.userId && (
+        <ConfirmModal
+          text={confirmAction.active === false
+            ? `Reactivar a conta de "${confirmAction.name}"?`
+            : `Suspender a conta de "${confirmAction.name}"? (Ideal para casos de avaliações muito baixas)`
+          }
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={() => suspend(confirmAction.userId, confirmAction.active)}
+        />
+      )}
+    </div>
+  );
+};
+
+// ============================================================
+// CONVERSAS & MENSAGENS (Admin Monitoring)
+// ============================================================
+const ConversationsPanel = () => {
+  const [conversations, setConversations] = useState([]);
+  const [selectedConv, setSelectedConv] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [loading, setL] = useState(true);
+  const [loadingMsgs, setLoadingMsgs] = useState(false);
+
+  const load = useCallback(() => {
+    setL(true);
+    adminFetch('/messages/conversations')
+      .then(d => setConversations(d.data || []))
+      .catch(e => console.error(e))
+      .finally(() => setL(false));
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => load(), 0);
+    return () => clearTimeout(t);
+  }, [load]);
+
+  const selectConversation = (conv) => {
+    setSelectedConv(conv);
+    setLoadingMsgs(true);
+    adminFetch(`/messages/project/${conv.id}`)
+      .then(d => setMessages(d.data || []))
+      .catch(e => console.error(e))
+      .finally(() => setLoadingMsgs(false));
+  };
+
+  if (loading) return <Spinner />;
+
+  return (
+    <div>
+      <h3 style={{ marginBottom: 16, color: C.dark }}>Conversas da Plataforma</h3>
+      {selectedConv ? (
+        <div>
+          <button
+            onClick={() => setSelectedConv(null)}
+            className="admin-btn secondary"
+            style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}
+          >
+            <Icon icon={faChevronLeft} size={13} /> Voltar às Conversas
+          </button>
+          <Card style={{ marginBottom: 16, borderLeft: `4px solid ${C.primary}` }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: C.dark }}>
+              Cliente: {selectedConv.client?.name} ({selectedConv.client?.email})
+            </div>
+            <div style={{ fontWeight: 600, fontSize: 13, color: C.gray, marginTop: 4 }}>
+              Profissional: {selectedConv.professional?.user?.name} ({selectedConv.professional?.specialty})
+            </div>
+            <div style={{ fontSize: 12, color: C.gray, marginTop: 4 }}>
+              Projeto Contexto: {selectedConv.title}
+            </div>
+          </Card>
+          {loadingMsgs ? <Spinner /> : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {messages.length === 0 ? (
+                <p style={{ textAlign: "center", color: C.gray, padding: 20 }}>Sem mensagens nesta conversa.</p>
+              ) : (
+                messages.map((m) => (
+                  <Card key={m.id} style={{ background: m.senderId === selectedConv.clientId ? C.white : C.lightGray }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ fontWeight: 700, fontSize: 13, color: C.primary }}>
+                        {m.sender?.name || "Utilizador"}
+                      </span>
+                      <span style={{ fontSize: 11, color: C.gray }}>
+                        {new Date(m.createdAt).toLocaleString("pt-PT")}
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: 14, color: C.dark, lineHeight: 1.5 }}>{m.content}</p>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {conversations.length === 0 ? (
+            <p style={{ textAlign: "center", color: C.gray, padding: 32 }}>Nenhuma conversa iniciada na plataforma.</p>
+          ) : (
+            conversations.map((c) => {
+              const lastMsg = c.messages?.[0];
+              return (
+                <Card key={c.id} style={{ cursor: "pointer", transition: "all 0.2s" }} onClick={() => selectConversation(c)}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: C.dark }}>
+                        {c.client?.name} & {c.professional?.user?.name}
+                      </div>
+                      <div style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>
+                        Especialidade: {c.professional?.specialty} | Projeto: {c.title}
+                      </div>
+                      {lastMsg && (
+                        <p style={{ fontSize: 13, color: C.dark, margin: "8px 0 0", fontStyle: "italic", background: C.lightGray, padding: "6px 10px", borderRadius: 8 }}>
+                          "{lastMsg.content?.slice(0, 100)}{lastMsg.content?.length > 100 ? '...' : ''}"
+                        </p>
+                      )}
+                    </div>
+                    <button className="admin-btn primary small" style={{ whiteSpace: "nowrap" }}>
+                      Ver Histórico
+                    </button>
+                  </div>
+                </Card>
+              );
+            })
+          )}
+        </div>
       )}
     </div>
   );
@@ -699,202 +888,7 @@ const PortfoliosPanel = () => {
 };
 
 // ============================================================
-// COMENTÁRIOS (moderação)
-// ============================================================
-const CommentsPanel = () => {
-  const [comments, setComments] = useState([]);
-  const [loading, setL] = useState(true);
-  const [search, setSearch] = useState("");
-  const [ratingFilter, setRatingFilter] = useState("");
-  const [page, setPage] = useState(1);
-  const [pages, setPages] = useState(1);
-  const [confirmAction, setConfirmAction] = useState(null);
 
-  const load = useCallback(() => {
-    setL(true);
-    const params = new URLSearchParams({ page, limit: 15, ...(search ? { search } : {}), ...(ratingFilter ? { rating: ratingFilter } : {}) });
-    adminFetch(`/comments?${params}`)
-      .then(d => { setComments(d.data); setPages(d.pages); })
-      .catch(e => console.error(e))
-      .finally(() => setL(false));
-  }, [page, search, ratingFilter]);
-
-  useEffect(() => { const t = setTimeout(() => load(), 0); return () => clearTimeout(t); }, [load]);
-
-  const remove = async (id) => {
-    try {
-      await adminFetch(`/comments/${id}`, { method: "DELETE" });
-      setComments(prev => prev.filter(c => c.id !== id));
-      setConfirmAction(null);
-    } catch (e) { alert(e.message); }
-  };
-
-  return (
-    <div>
-      <div className="admin-toolbar">
-        <div className="admin-search-box">
-          <Icon icon={faSearch} size={14} color={C.gray} />
-          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Pesquisar por texto ou autor..." />
-          {search && <button onClick={() => setSearch("")} className="admin-clear-btn"><Icon icon={faTimes} size={12} color={C.gray} /></button>}
-        </div>
-        <select value={ratingFilter} onChange={e => { setRatingFilter(e.target.value); setPage(1); }} className="admin-select">
-          <option value="">Todas as estrelas</option>
-          {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} estrela{n > 1 ? "s" : ""}</option>)}
-        </select>
-      </div>
-
-      {loading ? <Spinner /> : (
-        <>
-          {comments.map(c => (
-            <Card key={c.id} style={{ marginBottom: 12 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-                <div>
-                  <div style={{ fontWeight: 700, color: C.dark, fontSize: 14 }}>{c.author?.name}</div>
-                  <div style={{ color: C.gray, fontSize: 12 }}>avaliou {c.professional?.user?.name} ({c.professional?.specialty})</div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div>
-                    {[1, 2, 3, 4, 5].map(i => <Icon key={i} icon={faStar} size={13} color={i <= c.rating ? "#F59E0B" : C.border} />)}
-                  </div>
-                  <button className="admin-icon-btn danger" title="Eliminar" onClick={() => setConfirmAction({ id: c.id })}>
-                    <Icon icon={faTrash} size={13} color={C.error} />
-                  </button>
-                </div>
-              </div>
-              <p style={{ color: C.dark, fontSize: 13, lineHeight: 1.6, margin: "10px 0 0", background: C.lightGray, padding: "10px 12px", borderRadius: 10 }}>{c.comment}</p>
-              {c.reply && (
-                <p style={{ color: C.gray, fontSize: 12, margin: "8px 0 0", paddingLeft: 12, borderLeft: `3px solid ${C.border}` }}>
-                  Resposta: {c.reply}
-                </p>
-              )}
-              <div style={{ fontSize: 11, color: C.gray, marginTop: 8 }}>{new Date(c.createdAt).toLocaleDateString("pt-PT")}</div>
-            </Card>
-          ))}
-          {comments.length === 0 && <p style={{ textAlign: "center", color: C.gray, padding: 32 }}>Nenhum comentário encontrado</p>}
-        </>
-      )}
-      <Pagination page={page} pages={pages} onChange={setPage} />
-      {confirmAction && (
-        <ConfirmModal
-          text="Eliminar este comentário? A média do profissional será recalculada."
-          onCancel={() => setConfirmAction(null)}
-          onConfirm={() => remove(confirmAction.id)}
-        />
-      )}
-    </div>
-  );
-};
-
-// ============================================================
-// Avaliação
-// ============================================================
-const LowRatingsPanel = () => {
-  const [professionals, setProfessionals] = useState([]);
-  const [loading, setL] = useState(true);
-  const [threshold, setThreshold] = useState("3");
-  const [page, setPage] = useState(1);
-  const [pages, setPages] = useState(1);
-  const [confirmAction, setConfirmAction] = useState(null);
-
-  const load = useCallback(() => {
-    setL(true);
-    const params = new URLSearchParams({ page, limit: 15, threshold });
-    adminFetch(`/professionals/low-ratings?${params}`)
-      .then(d => { setProfessionals(d.data); setPages(d.pages); })
-      .catch(e => console.error(e))
-      .finally(() => setL(false));
-  }, [page, threshold]);
-
-  useEffect(() => { const t = setTimeout(() => load(), 0); return () => clearTimeout(t); }, [load]);
-
-  const suspend = async (userId, currentActive) => {
-    try {
-      await adminFetch(`/users/${userId}/status`, { method: "PUT", body: JSON.stringify({ active: !currentActive }) });
-      setProfessionals(prev => prev.map(p =>
-        p.user.id === userId ? { ...p, user: { ...p.user, active: !currentActive } } : p
-      ));
-      setConfirmAction(null);
-    } catch (e) { alert(e.message); }
-  };
-
-  const stars = (rating) => (
-    <span>
-      {[1, 2, 3, 4, 5].map(i => <Icon key={i} icon={faStar} size={12} color={i <= Math.round(rating) ? "#F59E0B" : C.border} />)}
-      <span style={{ fontSize: 12, marginLeft: 4, color: C.gray }}>{Number(rating).toFixed(1)}</span>
-    </span>
-  );
-
-  return (
-    <div>
-      <div className="admin-toolbar">
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: "10px 14px" }}>
-          <span style={{ fontSize: 13, color: C.gray, whiteSpace: "nowrap" }}>Limite de classificação:</span>
-          <select value={threshold} onChange={e => { setThreshold(e.target.value); setPage(1); }} style={{ border: "none", outline: "none", fontSize: 13, color: C.dark, background: "transparent" }}>
-            {["1", "2", "3", "4"].map(n => <option key={n} value={n}>Abaixo de {n} estrelas</option>)}
-          </select>
-        </div>
-      </div>
-
-      {loading ? <Spinner /> : (
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Profissional</th>
-                <th className="hide-mobile">Especialidade</th>
-                <th>Avaliação</th>
-                <th className="hide-mobile">Avaliações</th>
-                <th>Estado</th>
-                <th>Acções</th>
-              </tr>
-            </thead>
-            <tbody>
-              {professionals.map(p => (
-                <tr key={p.id}>
-                  <td>
-                    <div style={{ fontWeight: 700, color: C.dark }}>{p.user?.name}</div>
-                    <div style={{ fontSize: 11, color: C.gray }}>{p.user?.email}</div>
-                  </td>
-                  <td className="hide-mobile">{p.specialty}</td>
-                  <td>{stars(p.rating)}</td>
-                  <td className="hide-mobile">{p.reviewCount}</td>
-                  <td>
-                    <Pill bg={p.user?.active === false ? "#FEE2E2" : "#D1FAE5"} color={p.user?.active === false ? C.error : C.success}>
-                      {p.user?.active === false ? "Suspenso" : "Activo"}
-                    </Pill>
-                  </td>
-                  <td>
-                    <button
-                      className="admin-icon-btn"
-                      title={p.user?.active === false ? "Reactivar" : "Suspender"}
-                      onClick={() => setConfirmAction({ userId: p.user.id, name: p.user.name, active: p.user.active })}
-                    >
-                      <Icon icon={p.user?.active === false ? faCheck : faBan} size={13} color={p.user?.active === false ? C.success : "#D97706"} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {professionals.length === 0 && (
-                <tr><td colSpan={6} style={{ textAlign: "center", padding: 24, color: C.gray }}>Nenhum profissional com classificação abaixo de {threshold}</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <Pagination page={page} pages={pages} onChange={setPage} />
-      {confirmAction && (
-        <ConfirmModal
-          text={confirmAction.active === false
-            ? `Reactivar a conta de "${confirmAction.name}"?`
-            : `Suspender a conta de "${confirmAction.name}" por baixa avaliação?`
-          }
-          onCancel={() => setConfirmAction(null)}
-          onConfirm={() => suspend(confirmAction.userId, confirmAction.active)}
-        />
-      )}
-    </div>
-  );
-};
 
 // ============================================================
 // ALERTAS
@@ -1304,18 +1298,261 @@ const VerificationsPanel = () => {
 };
 
 // ============================================================
+// PAINEL DE CATEGORIAS
+// ============================================================
+const CategoriesPanel = () => {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [name, setName] = useState("");
+  const [icon, setIcon] = useState("");
+  const [img, setImg] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState(null); // { type: 'success'|'error', msg }
+  const token = () => localStorage.getItem("buildmatch_token");
+
+  const load = () => {
+    setLoading(true);
+    fetch(`${API_BASE}/api/categories`, { headers: { Authorization: `Bearer ${token()}` } })
+      .then(res => res.json())
+      .then(d => { setItems(d.data || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  };
+  useEffect(() => { load(); }, []);
+
+  const showFeedback = (type, msg) => {
+    setFeedback({ type, msg });
+    setTimeout(() => setFeedback(null), 3500);
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setImg(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const add = async () => {
+    if (!name.trim()) { showFeedback("error", "O nome é obrigatório."); return; }
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/categories`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ name: name.trim(), icon: icon.trim(), img })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao criar");
+      setName(""); setIcon(""); setImg("");
+      showFeedback("success", `Categoria "${data.data?.name}" criada com sucesso!`);
+      load();
+    } catch (e) {
+      showFeedback("error", e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (id, nome) => {
+    if (!window.confirm(`Apagar a categoria "${nome}"?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/categories/${id}`, {
+        method: "DELETE", headers: { Authorization: `Bearer ${token()}` }
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+      showFeedback("success", `Categoria "${nome}" apagada.`);
+      load();
+    } catch (e) {
+      showFeedback("error", e.message);
+    }
+  };
+
+  return (
+    <div>
+      {/* Feedback banner */}
+      {feedback && (
+        <div style={{
+          marginBottom: 14, padding: "12px 16px", borderRadius: 10, fontWeight: 600, fontSize: 13,
+          background: feedback.type === "success" ? "#D1FAE5" : "#FEE2E2",
+          color: feedback.type === "success" ? "#065F46" : "#991B1B",
+          border: `1px solid ${feedback.type === "success" ? "#6EE7B7" : "#FECACA"}`
+        }}>
+          {feedback.type === "success" ? "✅ " : "❌ "}{feedback.msg}
+        </div>
+      )}
+
+      {/* Formulário de criação */}
+      <div style={{ background: "#fff", borderRadius: 16, padding: 20, marginBottom: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
+        <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: C.dark }}>Nova Categoria</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: C.gray, textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 6 }}>Nome *</label>
+            <input
+              placeholder="Ex: Pedreiro, Electricista..."
+              value={name}
+              onChange={e => setName(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && add()}
+              className="admin-search-box"
+              style={{ width: "100%", boxSizing: "border-box" }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: C.gray, textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 6 }}>Ícone FontAwesome</label>
+            <input
+              placeholder="Ex: faTools, faHammer..."
+              value={icon}
+              onChange={e => setIcon(e.target.value)}
+              className="admin-search-box"
+              style={{ width: "100%", boxSizing: "border-box" }}
+            />
+          </div>
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: C.gray, textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 6 }}>Imagem (opcional)</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <input type="file" accept="image/*" onChange={handleImageChange} style={{ fontSize: 13 }} />
+            {img && (
+              <div style={{ position: "relative" }}>
+                <img src={img} alt="preview" style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 10, border: `2px solid ${C.border}` }} />
+                <button onClick={() => setImg("")} style={{ position: "absolute", top: -6, right: -6, background: C.error, border: "none", borderRadius: "50%", width: 18, height: 18, cursor: "pointer", color: "#fff", fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+              </div>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={add}
+          disabled={saving}
+          className="admin-logout-btn"
+          style={{ background: saving ? C.gray : C.accent, opacity: saving ? 0.7 : 1 }}
+        >
+          <Icon icon={faPlus} /> {saving ? "A guardar..." : "Adicionar Categoria"}
+        </button>
+      </div>
+
+      {/* Tabela de categorias */}
+      <div style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
+        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.dark }}>Categorias existentes</h3>
+          <span style={{ background: C.lightGray, borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 700, color: C.gray }}>{items.length}</span>
+        </div>
+        {loading ? <div style={{ padding: 32, textAlign: "center" }}><Spinner /></div> : items.length === 0 ? (
+          <p style={{ textAlign: "center", color: C.gray, padding: 32, margin: 0 }}>Nenhuma categoria criada ainda.</p>
+        ) : (
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th style={{ width: 60 }}>Imagem</th>
+                <th>Nome</th>
+                <th>Ícone</th>
+                <th style={{ width: 60 }}>Acções</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map(item => (
+                <tr key={item.id}>
+                  <td>
+                    {item.img
+                      ? <img src={item.img} alt={item.name} style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 8, border: `1px solid ${C.border}` }} />
+                      : <div style={{ width: 40, height: 40, borderRadius: 8, background: C.lightGray, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🏷️</div>
+                    }
+                  </td>
+                  <td style={{ fontWeight: 600, color: C.dark }}>{item.name}</td>
+                  <td style={{ color: C.gray, fontFamily: "monospace", fontSize: 12 }}>{item.icon || "—"}</td>
+                  <td>
+                    <button onClick={() => remove(item.id, item.name)} className="admin-icon-btn danger" title="Apagar categoria">
+                      <Icon icon={faTrash} size={13} color={C.error} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// PAINEL DE FAQS
+// ============================================================
+const FAQsPanel = () => {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState("");
+  const [a, setA] = useState("");
+  const [type, setType] = useState("BOTH");
+
+  const load = () => {
+    setLoading(true);
+    fetch(`${API_BASE}/api/faqs`, { headers: { Authorization: `Bearer ${localStorage.getItem("buildmatch_token")}` } })
+      .then(res => res.json())
+      .then(d => { setItems(d.data || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  };
+  useEffect(() => { load(); }, []);
+
+  const add = async () => {
+    if (!q || !a) return;
+    await fetch(`${API_BASE}/api/faqs`, {
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("buildmatch_token")}` },
+      body: JSON.stringify({ question: q, answer: a, type })
+    });
+    setQ(""); setA(""); load();
+  };
+
+  const remove = async (id) => {
+    if (!window.confirm("Apagar FAQ?")) return;
+    await fetch(`${API_BASE}/api/faqs/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${localStorage.getItem("buildmatch_token")}` } });
+    load();
+  };
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 16, padding: 20 }}>
+      <h3 style={{ margin: "0 0 16px" }}>Perguntas Frequentes</h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+        <input placeholder="Pergunta" value={q} onChange={e => setQ(e.target.value)} className="admin-search-box" />
+        <textarea placeholder="Resposta" value={a} onChange={e => setA(e.target.value)} className="admin-search-box" style={{ minHeight: 60, width: "100%" }} />
+        <div style={{ display: "flex", gap: 10 }}>
+          <select value={type} onChange={e => setType(e.target.value)} className="admin-select">
+            <option value="CLIENT">Cliente</option>
+            <option value="PROFESSIONAL">Profissional</option>
+            <option value="BOTH">Ambos</option>
+          </select>
+          <button onClick={add} className="admin-logout-btn" style={{ background: C.accent }}><Icon icon={faPlus} /> Adicionar</button>
+        </div>
+      </div>
+      {loading ? <Spinner /> : (
+        <table className="admin-table">
+          <thead><tr><th>Pergunta</th><th>Tipo</th><th>Acções</th></tr></thead>
+          <tbody>
+            {items.map(item => (
+              <tr key={item.id}>
+                <td>{item.question}</td>
+                <td>{item.type}</td>
+                <td><button onClick={() => remove(item.id)} className="admin-icon-btn danger"><Icon icon={faTrash} color={C.error} /></button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+};
+
+// ============================================================
 // PAINEL PRINCIPAL
 // ============================================================
-export default function AdminDashboard({ onLogout, hideHeader, tab, onChangeTab, initialTab }) {
+export default function AdminDashboard({ onLogout, hideHeader, tab, initialTab }) {
   const [internalTab, setInternalTab] = useState(initialTab || TABS[0].id);
-  const activeTab = tab !== undefined ? tab : internalTab;
-  const setActiveTab = onChangeTab !== undefined ? onChangeTab : setInternalTab;
+  const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
 
-  useEffect(() => {
-    if (initialTab && tab === undefined) {
-      setInternalTab(initialTab);
-    }
-  }, [initialTab, tab]);
+  if (initialTab !== prevInitialTab && tab === undefined) {
+    setPrevInitialTab(initialTab);
+    setInternalTab(initialTab);
+  }
+
+  const activeTab = tab !== undefined ? tab : internalTab;
 
   return (
     <div className="admin-shell">
@@ -1389,13 +1626,14 @@ export default function AdminDashboard({ onLogout, hideHeader, tab, onChangeTab,
         {activeTab === "overview" && <Overview />}
         {activeTab === "users" && <UsersPanel />}
         {activeTab === "projects" && <ProjectsPanel />}
+        {activeTab === "conversations" && <ConversationsPanel />}
         {activeTab === "reviews" && <ReviewsPanel />}
         {activeTab === "portfolios" && <PortfoliosPanel />}
-        {activeTab === "comments" && <CommentsPanel />}
-        {activeTab === "lowRatings" && <LowRatingsPanel />}
         {activeTab === "verifications" && <VerificationsPanel />}
         {activeTab === "alerts" && <AlertsPanel />}
         {activeTab === "audit" && <AuditPanel />}
+        {activeTab === "categories" && <CategoriesPanel />}
+        {activeTab === "faqs" && <FAQsPanel />}
       </div>
     </div>
   );

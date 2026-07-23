@@ -49,8 +49,16 @@ router.get('/', async (req, res) => {
         include: {
           user: { select: { id: true, name: true, email: true, avatar: true, phone: true } },
           portfolio: { take: 3, orderBy: { createdAt: 'desc' } },
+          reviews: { select: { rating: true } },
         },
         orderBy: { [sortField]: order },
+      });
+
+      // Calcular reviewCount e rating dinamicamente a partir dos reviews reais
+      allProfs.forEach(p => {
+        p.reviewCount = p.reviews.length;
+        p.rating = p.reviewCount > 0 ? p.reviews.reduce((s, r) => s + r.rating, 0) / p.reviewCount : 0;
+        delete p.reviews; // Limpar payload
       });
 
       const filtered = allProfs
@@ -74,6 +82,7 @@ router.get('/', async (req, res) => {
         include: {
           user: { select: { id: true, name: true, email: true, avatar: true, phone: true } },
           portfolio: { take: 3, orderBy: { createdAt: 'desc' } },
+          reviews: { select: { rating: true } },
         },
         orderBy: { [sortField]: order },
         skip: (parseInt(page) - 1) * parseInt(limit),
@@ -81,6 +90,13 @@ router.get('/', async (req, res) => {
       }),
       prisma.professional.count({ where }),
     ]);
+
+    // Calcular reviewCount e rating dinamicamente a partir dos reviews reais
+    professionals.forEach(p => {
+      p.reviewCount = p.reviews.length;
+      p.rating = p.reviewCount > 0 ? p.reviews.reduce((s, r) => s + r.rating, 0) / p.reviewCount : 0;
+      delete p.reviews; // Limpar payload
+    });
 
     res.json({
       data: professionals,
@@ -115,10 +131,17 @@ router.get('/search', async (req, res) => {
       },
       include: {
         user: { select: { id: true, name: true, avatar: true } },
+        reviews: { select: { rating: true } },
       },
       orderBy: { rating: 'desc' },
       skip: (parseInt(page) - 1) * parseInt(limit),
       take: parseInt(limit),
+    });
+
+    professionals.forEach(p => {
+      p.reviewCount = p.reviews.length;
+      p.rating = p.reviewCount > 0 ? p.reviews.reduce((s, r) => s + r.rating, 0) / p.reviewCount : 0;
+      delete p.reviews;
     });
 
     res.json({ data: professionals });
@@ -148,6 +171,14 @@ router.get('/:id', async (req, res) => {
 
     if (!professional) {
       return res.status(404).json({ error: 'Profissional não encontrado' });
+    }
+
+    // Sincronizar contador de avaliações com os dados reais do banco
+    if (professional.reviews) {
+      professional.reviewCount = professional.reviews.length;
+      professional.rating = professional.reviewCount > 0 
+        ? professional.reviews.reduce((s, r) => s + r.rating, 0) / professional.reviewCount 
+        : 0;
     }
 
     res.json(professional);
